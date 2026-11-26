@@ -14,6 +14,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: pip install git+https://github.com/basic-bgnr/NepseUnofficialApi
+      - name: Fetch today's prices
+        run: python scripts/fetch_prices.py
+        continue-on-error: true
       - run: python scripts/fetch_floorsheet.py
       - run: |
           git config user.name "floorsheet-bot"
