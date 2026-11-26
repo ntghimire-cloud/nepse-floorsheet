@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEPSE स्क्यान ड्यासबोर्ड</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b1f24;--mute:#667085;--line:#e4e7ec;--acc:#2f6fdb;--buy:#12805c;--watch:#b7791f;--hold:#667085;--sell:#c4320a;--pos:#12805c;--neg:#c4320a;--chip:#eef2f7}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#171b21;--ink:#e6e9ee;--mute:#98a2b3;--line:#2a3038;--acc:#6ea0ff;--buy:#3ccf91;--watch:#f2b84b;--hold:#98a2b3;--sell:#ff7a59;--pos:#3ccf91;--neg:#ff7a59;--chip:#222831}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Noto Sans Devanagari",sans-serif}
+header{padding:18px 20px 8px;max-width:1280px;margin:auto}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mute);font-size:13px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:110px}
+.chip b{display:block;font-size:20px}
+.chip span{color:var(--mute);font-size:12px}
+nav{max-width:1280px;margin:8px auto 0;padding:0 20px;display:flex;gap:4px;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--mute);font:inherit;cursor:pointer}
+nav button.on{color:var(--ink);border-color:var(--acc);font-weight:600}
+main{max-width:1280px;margin:auto;padding:16px 20px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+input,select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--mute);font-weight:500;font-size:12px;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--card)}
+th:first-child,td:first-child,td.l,th.l{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--chip)}
+.tw{overflow:auto;max-height:70vh}
+.sig{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:#fff}
+.s-buy{background:var(--buy)}.s-watch{background:var(--watch)}.s-hold{background:var(--hold)}.s-sell{background:var(--sell)}
+.p{color:var(--pos)}.n{color:var(--neg)}.m{color:var(--mute)}
+.new{font-size:11px;color:var(--acc);margin-left:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kv{background:var(--chip);border-radius:8px;padding:8px 10px}
+.kv>span{display:block;color:var(--mute);font-size:12px}
+.kv b{font-size:15px}
+#detail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:9;overflow:auto}
+#detail .box{background:var(--bg);max-width:1000px;margin:24px auto;border-radius:14px;padding:18px}
+.x{float:right;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 12px;cursor:pointer;color:var(--ink);font:inherit}
+canvas{width:100%;display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}th,td{padding:6px 5px}}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mute);margin:4px 0}
+.legend i{display:inline-block;width:14px;height:3px;margin-right:4px;vertical-align:middle}
+.note{color:var(--mute);font-size:12.5px}
+.warn{border-left:3px solid var(--watch);padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:14px}
+.bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc)}
+</style>
+</head>
+<body>
+<header>
+  <h1>NEPSE स्क्यान ड्यासबोर्ड</h1>
+  <div class="sub" id="sub">लोड हुँदैछ…</div>
+  <div class="chips" id="chips"></div>
+</header>
+<nav>
+  <button data-t="stocks" class="on">शेयरहरू</button>
+  <button data-t="ind">Indicator र weight</button>
+  <button data-t="method">विधि र सीमा</button>
+</nav>
+<main>
+  <section id="t-stocks">
+    <div class="warn" id="warnScore"></div>
+    <div class="card">
+      <div class="tools">
+        <input id="q" placeholder="सिम्बोल खोज्नुहोस्…" size="18">
+        <select id="fsig"><option value="">सबै सङ्केत</option><option value="buy">किन्न योग्य</option><option value="watch">निगरानी</option><option value="hold">होल्ड</option><option value="sell">बिक्री/सावधान</option></select>
+        <select id="fnew"><option value="">सबै</option><option value="new">आज नयाँ सङ्केत मात्र</option></select>
+        <span class="note" id="cnt"></span>
+      </div>
+      <div class="tw"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+  <section id="t-ind" hidden>
+    <div class="card">
+      <h3 style="margin-top:0">हरेक indicator: weight, आजको औसत र ऐतिहासिक प्रभाव</h3>
+      <p class="note">Weight = स्कोरमा दिने अङ्कको दायरा। "आज औसत" = सबै शेयरमा यो indicator ले दिएको अङ्कको औसत। ऐतिहासिक प्रभाव = यो अवस्थामा रहेका शेयरको अर्को 20 कारोबार दिनको प्रतिफल, सोही दिनका सबै शेयरको औसतभन्दा कति बढी/कम (excess %)। t ले तथ्याङ्कीय भरोसा जनाउँछ (|t| &gt; 2 भए भरपर्दो मानिन्छ)।</p>
+      <div class="tw"><table id="indTbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">कुल अङ्क समूहअनुसार ऐतिहासिक प्रतिफल</h3>
+      <div class="tw"><table id="scTbl"><thead></thead><tbody></tbody></table></div>
+      <p class="note" id="btNote"></p>
+    </div>
+  </section>
+  <section id="t-method" hidden>
+    <div class="card" id="methodBox"></div>
+  </section>
+</main>
+<div id="detail"><div class="box" id="dbox"></div></div>
+<script>
+const SIG={buy:'किन्न योग्य',watch:'निगरानी',hold:'होल्ड',sell:'बिक्री/सावधान'};
+const IND=[
+ {k:'ma200',n:'200 दिने MA स्थिति',w:'−2 / +2',d:'मूल्य 200 MA माथि भए +2, तल भए −2 (200 दिनको डाटा नभए 50 MA, ±1)।',side:'pos'},
+ {k:'ma50_200',n:'50 MA बनाम 200 MA',w:'−1 / +1',d:'50 MA 200 MA माथि भए +1।',side:'pos'},
+ {k:'cross',n:'Golden / Death cross',w:'−1 / +1',d:'पछिल्ला 5 दिनमा 50 MA ले 200 MA काटेको।',side:'pos'},
+ {k:'ema20',n:'20 EMA स्थिति',w:'−1 / +1',d:'मूल्य 20 EMA माथि भए +1।',side:'pos'},
+ {k:'ema20_slope',n:'20 EMA ढलान',w:'−1 / +1',d:'20 EMA 5 दिनअघिभन्दा माथि भए +1।',side:'pos'},
+ {k:'rsi',n:'RSI (14)',w:'−1 / +1',d:'50–70 मा +1; 70 माथि (overbought) −1; 30–40 मा −1; 30 तल 0।',side:'pos'},
+ {k:'div',n:'RSI divergence',w:'−1 / +1',d:'मूल्य 20 दिने न्यूनमा तर RSI माथि (+1); मूल्य उच्चमा तर RSI पछि (−1)।',side:'pos'},
+ {k:'obv',n:'OBV बनाम 20 दिने औसत',w:'−1 / +1',d:'OBV आफ्नो औसत माथि (पैसा भित्रिँदै) भए +1।',side:'pos'},
+ {k:'volp',n:'Volume सहित मूल्य चाल',w:'−1 / +1',d:'मूल्य बढ्दा volume ≥1.5× औसत +1; घट्दा ≥1.5× −1।',side:'pos'},
+ {k:'sup',n:'20 दिने support तोड्नु',w:'−2',d:'Close 20 दिने न्यूनभन्दा तल।',side:'neg'},
+ {k:'illiq',n:'कम कारोबार',w:'−1',d:'20 दिने औसत कारोबार 2,000 कित्ताभन्दा कम।',side:'neg'},
+ {k:'brk',n:'20 दिने resistance तोड्नु',w:'0 (जानकारी)',d:'2026-11-26 देखि अङ्क हटाइएको (walk-forward मा कमजोर)। टिप्पणीमा मात्र।',side:'info'},
+ {k:'squeeze',n:'Bollinger squeeze',w:'0 (जानकारी)',d:'Band width 120 दिनको तल्लो 10% मा।',side:'info'},
+ {k:'macd',n:'MACD',w:'हटाइएको',d:'2026-11-26 देखि स्कोरमा छैन: NEPSE मा bullish crossover पछि बजारभन्दा कमजोर (train र test दुवैमा)। मान विवरणमा मात्र देखाइन्छ।',side:'info'},
+];
+const $=s=>document.querySelector(s);
+const f=(x,d=1)=>x==null||!isFinite(x)?'–':Number(x).toFixed(d);
+const sg=(x,d=1)=>{if(x==null||!isFinite(x))return '–';const t=Number(x).toFixed(d);return /^-0(\.0+)?$/.test(t)?t.slice(1):(x>0?'+':'')+t};
+const cls=x=>x>0?'p':x<0?'n':'m';
+let D,B,rows=[],sortK='sc',sortDir=-1;
+
+Promise.all([fetch('data/latest.json',{cache:'no-cache'}).then(r=>r.json()),fetch('data/backtest.json',{cache:'no-cache'}).then(r=>r.json()).catch(()=>null)]).then(([d,b])=>{D=d;B=b;init()}).catch(e=>{$('#sub').textContent='डाटा लोड हुन सकेन: '+e});
+
+function verdict(k,side){
+  if(!B||!B.components[k])return {t:'–',c:'m'};
+  const g=B.components[k][side==='neg'?'neg':'pos'];if(!g||!g.train.t)return {t:'डाटा छैन',c:'m'};
+  const sgn=side==='neg'?-1:1,a=g.train.t*sgn,b=g.test.t*sgn;
+  if(a>1.5&&b>1.5)return {t:'दुवै अवधिमा काम गर्यो',c:'p'};
+  if(a<-1.5&&b<-1.5)return {t:'उल्टो असर',c:'n'};
+  if(b>1.5)return {t:'हालका वर्षमा मात्र',c:'p'};
+  if(a>1.5)return {t:'पहिले मात्र (अहिले होइन)',c:'m'};
+  if(a<-1.5||b<-1.5)return {t:'उल्टो सङ्केत देखिएको',c:'n'};
+  return {t:'स्पष्ट प्रमाण छैन',c:'m'};
+}
+
+function init(){
+  const c=D.counts;
+  $('#sub').innerHTML=`मिति <b>${D.date}</b> · बजार ${D.market||'–'} · अघिल्लो: ${D.prevMarket||'–'} · अपडेट ${new Date(D.generated).toLocaleString('ne-NP',{timeZone:'Asia/Kathmandu'})}`;
+  $('#chips').innerHTML=[['buy',c.buy],['watch',c.watch],['hold',c.hold],['sell',c.sell]].map(([k,v])=>`<div class="chip"><b style="color:var(--${k})">${v}</b><span>${SIG[k]}</span></div>`).join('')+`<div class="chip"><b>${D.stocks.length}</b><span>कुल कम्पनी</span></div><div class="chip"><b>${Math.round((D.breadth||0)*100)}%</b><span>50 MA माथि</span></div>`;
+  const s7=B&&B.score['≥7'];
+  $('#warnScore').innerHTML=s7?`<b>ध्यान दिनुहोस्:</b> 2018–2026 को backtest मा "किन्न योग्य" (अङ्क ≥7) शेयरले अर्को 20 दिनमा बजारभन्दा औसत ${sg(s7.train.ex,2)}% (2018–23) र ${sg(s7.test.ex,2)}% (2024–26) मात्र गरे — भरपर्दो बढी प्रतिफल देखिएन। यो सूची अध्ययन सुरु गर्ने ठाउँ हो, खरिद सिफारिस होइन। विवरण "Indicator र weight" ट्याबमा।`:'';
+  rows=D.stocks;
+  buildTable();buildInd();buildMethod();
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['stocks','ind','method'].forEach(t=>$('#t-'+t).hidden=t!==b.dataset.t)});
+  ['q','fsig','fnew'].forEach(id=>$('#'+id).oninput=renderRows);
+  $('#detail').onclick=e=>{if(e.target.id==='detail')closeD()};
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
+  const goHash=()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&D.stocks.find(s=>s.sym===h))openD(h)};goHash();window.addEventListener('hashchange',goHash);
+}
+
+const COLS=[['sym','सिम्बोल'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %']];
+function val(s,k){if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
+function buildTable(){
+  $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<2?'l':''}">${n}</th>`).join('')+'</tr>';
+  $('#tbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=k==='sym'?1:-1}renderRows()};
+  $('#tbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)openD(tr.dataset.s)};
+  renderRows();
+}
+function renderRows(){
+  const q=$('#q').value.trim().toUpperCase(),fs=$('#fsig').value,fn=$('#fnew').value;
+  let r=rows.filter(s=>(!q||s.sym.includes(q))&&(!fs||s.sig===fs)&&(!fn||s.sig!==s.prevSig));
+  r.sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir||b.sc-a.sc});
+  $('#cnt').textContent=r.length+' शेयर';
+  $('#tbl tbody').innerHTML=r.map(s=>{const d=val(s,'dsc');const isNew=s.prevSig&&s.sig!==s.prevSig;const b3=val(s,'b3');
+    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td></tr>`}).join('');
+}
+
+function buildInd(){
+  const st=D.stocks;
+  $('#indTbl thead').innerHTML='<tr><th class="l">Indicator</th><th class="l">नियम</th><th>Weight</th><th>आज औसत अङ्क</th><th>आज + / −</th><th>2018–23 excess % (t)</th><th>2024–26 excess % (t)</th><th class="l">निष्कर्ष</th></tr>';
+  $('#indTbl tbody').innerHTML=IND.map(I=>{
+    let sum=0,pos=0,neg=0;for(const s of st){const p=s.reasons.filter(r=>r.k===I.k).reduce((x,r)=>x+r.pts,0);sum+=p;if(p>0)pos++;if(p<0)neg++}
+    const g=B&&B.components[I.k]?B.components[I.k][I.side==='neg'?'neg':'pos']:null;
+    const cell=x=>x&&x.n?`<span class="${cls(x.ex)}">${sg(x.ex,2)}</span> <span class="m">(${f(x.t,1)}, n ${x.n})</span>`:'–';
+    const v=I.side==='info'?{t:'—',c:'m'}:verdict(I.k,I.side);
+    return `<tr style="cursor:default"><td class="l"><b>${I.n}</b></td><td class="l note" style="white-space:normal;max-width:320px">${I.d}</td><td>${I.w}</td><td class="${cls(sum)}">${I.side==='info'?'–':sg(sum/st.length,2)}</td><td>${I.side==='info'?'–':`<span class="p">${pos}</span> / <span class="n">${neg}</span>`}</td><td>${I.side==='info'?'–':cell(g&&g.train)}</td><td>${I.side==='info'?'–':cell(g&&g.test)}</td><td class="l ${v.c}">${v.t}</td></tr>`}).join('');
+  if(B){
+    $('#scTbl thead').innerHTML='<tr><th class="l">कुल अङ्क</th><th>2018–23 n</th><th>excess %</th><th>t</th><th>बजार जितेको %</th><th>2024–26 n</th><th>excess %</th><th>t</th><th>बजार जितेको %</th></tr>';
+    $('#scTbl tbody').innerHTML=Object.entries(B.score).map(([k,v])=>`<tr style="cursor:default"><td class="l"><b>${k}</b></td><td>${v.train.n}</td><td class="${cls(v.train.ex)}">${sg(v.train.ex,2)}</td><td>${f(v.train.t,2)}</td><td>${f(v.train.hit,0)}</td><td>${v.test.n}</td><td class="${cls(v.test.ex)}">${sg(v.test.ex,2)}</td><td>${f(v.test.t,2)}</td><td>${f(v.test.hit,0)}</td></tr>`).join('');
+    $('#btNote').textContent=`Backtest: 2018 देखि हरेक 5औँ कारोबार दिनमा सबै शेयरलाई दैनिक स्क्यानकै code ले अङ्क दिइयो (${B.nObs.toLocaleString()} अवलोकन)। अर्को दिनको close मा किनेर 20 दिन राख्दा, सोही दिनका सबै शेयरको औसतसँग तुलना। लागत घटाइएको छैन (करिब 1% थप्नुहोस्)। "बजार जितेको %" भन्दा 50% कम भए पनि औसत सकारात्मक हुन सक्छ, किनकि NEPSE मा थोरै ठूला विजेताले औसत बढाउँछन्। अद्यावधिक: ${B.generated.slice(0,10)}।`;
+  }
+}
+
+function buildMethod(){
+  $('#methodBox').innerHTML=`<h3 style="margin-top:0">यो ड्यासबोर्ड कसरी बन्छ</h3>
+  <p>हरेक कारोबार दिन (आइत–शुक्र) साँझ करिब 4:15 बजे GitHub Actions ले nepalstock.com बाट floorsheet र मूल्य ल्याउँछ, Aabishkar2/nepse-data को इतिहाससँग जोड्छ, र यही page को डाटा फेरि बनाउँछ। Code: <a href="https://github.com/ntghimire-cloud/nepse-floorsheet">ntghimire-cloud/nepse-floorsheet</a> (<code>scripts/lib_scan.js</code>)।</p>
+  <ul>
+  <li><b>अङ्क:</b> तालिकामा भएका indicator को अङ्कको जोड। ≥7 = किन्न योग्य, 3–6 = निगरानी, −2–2 = होल्ड, ≤−3 = बिक्री/सावधान। बजारको 40% भन्दा कम कम्पनी 50 MA माथि भए, वा कारोबार कम भए, "किन्न योग्य" लाई "निगरानी" मा झारिन्छ।</li>
+  <li><b>Stop-loss:</b> close − 2 × ATR(14)। <b>जोखिम %</b> = close देखि stop सम्मको दूरी।</li>
+  <li><b>ब्रोकर %:</b> आजको floorsheet मा सबैभन्दा धेरै किन्ने ३ ब्रोकरको हिस्सा। 50% वा बढी भए थोरै ब्रोकरमा खरिद केन्द्रित छ। कम कारोबार भएका शेयरमा यो स्वाभाविक रूपमा बढी हुन्छ।</li>
+  <li><b>मूल्य समायोजन:</b> बोनस/हकप्रद पछिको मूल्य फरकलाई per_change बाट समायोजन गरिएको छ।</li>
+  </ul>
+  <h3>सीमा</h3>
+  <ul>
+  <li>Backtest मा हटेका/गाभिएका कम्पनी छैनन् (survivorship bias)। कारोबार लागत घटाइएको छैन।</li>
+  <li>Floorsheet इतिहास 2026-11-26 बाट मात्र सुरु भएकाले ब्रोकर आधारित सूचकको backtest अझै सम्भव छैन।</li>
+  <li>Walk-forward जाँचमा कुनै पनि buy सङ्केतले लागत (~1%) पछि भरपर्दो रूपमा बजार जितेन।</li>
+  </ul>
+  <p><b>यो नियममा आधारित प्राविधिक स्क्रिनिङ मात्र हो, लगानी सल्लाह होइन।</b></p>`;
+}
+
+function closeD(){$('#detail').style.display='none';document.body.style.overflow='';history.replaceState(null,'',location.pathname)}
+function openD(sym){
+  const s=D.stocks.find(x=>x.sym===sym);if(!s)return;history.replaceState(null,'','#'+sym);
+  const m=s.m,b=s.broker;
+  const rs=s.reasons.map(r=>{const I=IND.find(i=>i.k===r.k);const v=I&&I.side!=='info'?verdict(r.k,I.side):null;return `<tr style="cursor:default"><td class="l">${I?I.n:(r.k==='market'?'बजार फिल्टर':r.k||'–')}</td><td class="l" style="white-space:normal">${r.t}</td><td class="${cls(r.pts)}"><b>${sg(r.pts,0)}</b></td><td class="l ${v?v.c:'m'}" style="white-space:normal">${v?v.t:'—'}</td></tr>`}).join('');
+  const kv=(n,v)=>`<div class="kv"><span>${n}</span><b>${v}</b></div>`;
+  const pct=(x,ref)=>ref?` <span class="${cls(x/ref*100-100)} note">(${sg(x/ref*100-100,1)}%)</span>`:'';
+  const brk=b?`<div class="two"><div><b>शीर्ष खरिद ब्रोकर</b>${b.buy.map(([id,q,p])=>`<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="width:44px">#${id}</span><div class="bar" style="flex:1"><i style="width:${p}%;background:var(--buy)"></i></div><span style="width:110px;text-align:right">${q.toLocaleString()} (${f(p,0)}%)</span></div>`).join('')}</div><div><b>शीर्ष बिक्री ब्रोकर</b>${b.sell.map(([id,q,p])=>`<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="width:44px">#${id}</span><div class="bar" style="flex:1"><i style="width:${p}%;background:var(--sell)"></i></div><span style="width:110px;text-align:right">${q.toLocaleString()} (${f(p,0)}%)</span></div>`).join('')}</div></div><p class="note">कुल ${b.qty.toLocaleString()} कित्ता, ${b.trades} कारोबार, ${b.nBuyers} खरिद ब्रोकर, ${b.nSellers} बिक्री ब्रोकर। शीर्ष ३ खरिद ${f(b.top3Buy,0)}% · शीर्ष ३ बिक्री ${f(b.top3Sell,0)}%।</p>`:'<p class="note">यो मितिको floorsheet उपलब्ध छैन।</p>';
+  const ai=[];
+  if(s.sig==='buy')ai.push('हाल प्राविधिक अङ्क उच्च छ।');
+  if(s.rsi>70)ai.push('RSI 70 माथि छ — छोटो अवधिमा तानिएको (overbought) अवस्था।');
+  if(s.volR!=null&&s.volR<1)ai.push('आजको volume 20 दिने औसतभन्दा कम छ — चालको पुष्टि कमजोर।');
+  if(b&&b.top3Buy>=50)ai.push('खरिद थोरै ब्रोकरमा केन्द्रित छ ('+f(b.top3Buy,0)+'%)।');
+  if(m.hi52&&s.c>=0.95*m.hi52)ai.push('मूल्य 52 हप्ते उच्चको 5% भित्र छ।');
+  if(m.ma200&&s.c<0.7*m.ma200)ai.push('मूल्य 200 MA भन्दा 30%+ तल छ।');
+  if(s.illiq)ai.push('कारोबार कम भएकाले सूचक कम भरपर्दो।');
+  $('#dbox').innerHTML=`<button class="x" onclick="closeD()">बन्द ✕</button>
+  <h2 style="margin:0">${s.sym} <span class="sig s-${s.sig}" style="vertical-align:middle">${SIG[s.sig]}</span> <span style="font-size:15px">अङ्क ${sg(s.sc,0)}</span>${s.prevSc!=null?` <span class="note">(हिजो ${sg(s.prevSc,0)}, ${SIG[s.prevSig]||'–'})</span>`:''}</h2>
+  <div class="sub">${s.date} · LTP <b>${f(s.c)}</b> <span class="${cls(s.chg)}">${sg(s.chg,2)}%</span></div>
+  ${ai.length?`<div class="warn" style="margin-top:10px">${ai.join(' ')}</div>`:''}
+  <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span></div><canvas id="cv" height="300"></canvas></div>
+  <div class="two"><div class="card"><b>अङ्क इतिहास (60 दिन)</b><canvas id="cv2" height="140"></canvas></div>
+  <div class="card"><b>मुख्य मान</b><div class="grid" style="margin-top:8px">
+   ${kv('20 EMA',f(m.ema20)+pct(s.c,m.ema20))}${kv('50 MA',f(m.ma50)+pct(s.c,m.ma50))}${kv('200 MA',f(m.ma200)+pct(s.c,m.ma200))}
+   ${kv('52 हप्ते उच्च',f(m.hi52)+pct(s.c,m.hi52))}${kv('52 हप्ते न्यून',f(m.lo52)+pct(s.c,m.lo52))}${kv('RSI (14)',f(s.rsi,0))}
+   ${kv('MACD / signal',f(m.macd,2)+' / '+f(m.macdSig,2))}${kv('ATR (14)',f(m.atr,1))}${kv('Stop-loss',f(s.stop)+' <span class="note">('+f(s.risk,1)+'%)</span>')}
+   ${kv('20 दिने support',f(s.sup))}${kv('20 दिने resistance',f(s.res))}${kv('Volume / 20 दिने औसत',f(m.vol,0)+' / '+f(m.avgVol20,0))}
+   ${kv('5 दिन',`<span class="${cls(m.r5)}">${sg(m.r5,1)}%</span>`)}${kv('20 दिन',`<span class="${cls(m.r20)}">${sg(m.r20,1)}%</span>`)}${kv('60 / 120 दिन',`<span class="${cls(m.r60)}">${sg(m.r60,1)}</span> / <span class="${cls(m.r120)}">${sg(m.r120,1)}%</span>`)}
+  </div></div></div>
+  <div class="card"><b>अङ्कको हिसाब</b><table style="margin-top:6px"><thead><tr><th class="l">Indicator</th><th class="l">आजको अवस्था</th><th>अङ्क</th><th class="l">ऐतिहासिक रूपमा</th></tr></thead><tbody>${rs}<tr style="cursor:default"><td class="l" colspan="2"><b>जम्मा</b></td><td><b>${sg(s.sc,0)}</b></td><td></td></tr></tbody></table></div>
+  <div class="card"><b>आजको floorsheet: ब्रोकर</b><div style="margin-top:8px">${brk}</div></div>
+  <p class="note">यो नियममा आधारित प्राविधिक स्क्रिनिङ मात्र हो, लगानी सल्लाह होइन।</p>`;
+  $('#detail').style.display='block';document.body.style.overflow='hidden';$('#detail').scrollTop=0;
+  requestAnimationFrame(()=>{drawPrice($('#cv'),s);drawScore($('#cv2'),s)});
+}
+
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function setup(cv){const dpr=window.devicePixelRatio||1;const w=cv.clientWidth,h=+cv.getAttribute('height');cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+'px';const g=cv.getContext('2d');g.scale(dpr,dpr);return [g,w,h]}
+function maArr(c,n,ema){const o=[];let s=0,e=null;for(let i=0;i<c.length;i++){if(ema){const k=2/(n+1);if(i===n-1){let t=0;for(let j=0;j<n;j++)t+=c[j];e=t/n}else if(i>=n)e=c[i]*k+e*(1-k);o.push(i>=n-1?e:null)}else{s+=c[i];if(i>=n)s-=c[i-n];o.push(i>=n-1?s/n:null)}}return o}
+function drawPrice(cv,s){
+  const [g,w,h]=setup(cv);const H=s.hist;const C=H.map(r=>r[4]),V=H.map(r=>r[5]);
+  const e20=maArr(C,20,1),m50=maArr(C,50),m200=s.m.ma200!=null?null:null;
+  const show=Math.min(120,H.length),st=H.length-show;
+  const pad={l:48,r:8,t:8,b:62};const ph=h-pad.t-pad.b;
+  const vis=[];for(let i=st;i<H.length;i++)vis.push(H[i][2],H[i][3],e20[i],m50[i]);vis.push(s.stop);
+  const lo=Math.min(...vis.filter(x=>x!=null)),hi=Math.max(...vis.filter(x=>x!=null));
+  const X=i=>pad.l+(i-st)/(show-1)*(w-pad.l-pad.r),Y=v=>pad.t+(hi-v)/(hi-lo||1)*ph;
+  g.font='11px system-ui';g.fillStyle=css('--mute');g.strokeStyle=css('--line');g.lineWidth=1;
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;const y=Y(v);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(v.toFixed(0),4,y+4)}
+  // volume
+  const vmax=Math.max(...V.slice(st))||1;const vb=h-18;
+  for(let i=st;i<H.length;i++){const bh=V[i]/vmax*36;g.fillStyle=C[i]>=(C[i-1]||C[i])?css('--pos')+'66':css('--neg')+'66';g.fillRect(X(i)-1.5,vb-bh,3,bh)}
+  const line=(arr,col,wd=1.5)=>{g.strokeStyle=col;g.lineWidth=wd;g.beginPath();let on=false;for(let i=st;i<H.length;i++){if(arr[i]==null){on=false;continue}const x=X(i),y=Y(arr[i]);on?g.lineTo(x,y):g.moveTo(x,y);on=true}g.stroke()};
+  // 200 MA requires 200 points before window; compute on available hist
+  const m200a=maArr(C,200);
+  line(m200a,'#9b59b6');line(m50,'#b7791f');line(e20,'#2f9e9e');line(C,css('--ink'),1.8);
+  g.setLineDash([5,4]);g.strokeStyle=css('--neg');g.beginPath();g.moveTo(X(st),Y(s.stop));g.lineTo(w-pad.r,Y(s.stop));g.stroke();g.setLineDash([]);
+  g.fillStyle=css('--mute');for(const i of [st,st+Math.floor(show/2),H.length-1])g.fillText(H[i][0],Math.min(X(i),w-70),h-3);
+}
+function drawScore(cv,s){
+  const [g,w,h]=setup(cv);const S=s.scoreHist;if(!S||S.length<2)return;const pad={l:28,r:6,t:8,b:16};
+  const lo=Math.min(-4,...S.map(x=>x[1])),hi=Math.max(8,...S.map(x=>x[1]));
+  const X=i=>pad.l+i/(S.length-1)*(w-pad.l-pad.r),Y=v=>pad.t+(hi-v)/(hi-lo)*(h-pad.t-pad.b);
+  g.font='11px system-ui';
+  for(const [v,c] of [[7,css('--buy')],[3,css('--watch')],[-3,css('--sell')],[0,css('--line')]]){g.strokeStyle=c;g.setLineDash(v?[4,4]:[]);g.beginPath();g.moveTo(pad.l,Y(v));g.lineTo(w-pad.r,Y(v));g.stroke();g.fillStyle=css('--mute');g.fillText(v,4,Y(v)+4)}
+  g.setLineDash([]);g.strokeStyle=css('--acc');g.lineWidth=2;g.beginPath();S.forEach((p,i)=>i?g.lineTo(X(i),Y(p[1])):g.moveTo(X(i),Y(p[1])));g.stroke();
+  g.fillStyle=css('--mute');g.fillText(S[0][0],pad.l,h-2);g.fillText(S[S.length-1][0],w-72,h-2);
+}
+</script>
+</body>
+</html>

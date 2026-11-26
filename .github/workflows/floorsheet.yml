@@ -5,6 +5,9 @@ on:
   workflow_dispatch: {}
 permissions:
   contents: write
+concurrency:
+  group: daily-floorsheet
+  cancel-in-progress: false
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -24,3 +27,35 @@ jobs:
           git add data || true
           git diff --cached --quiet || git commit -m "floorsheet $(date -u +%F)"
           git push
+
+  dashboard:
+    # Builds the dashboard data and publishes docs/ to GitHub Pages.
+    # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
+    needs: fetch
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Get price history (Aabishkar2/nepse-data)
+        run: GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/Aabishkar2/nepse-data.git ../nepse-data
+      - name: Build dashboard data
+        run: |
+          mkdir -p docs/data
+          REPORT_OUT=docs/data/latest.json node scripts/scan_daily.js ../nepse-data/data/company-wise data
+          node scripts/backtest_components.js ../nepse-data/data/company-wise docs/data/backtest.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: docs }
+      - id: deploy
+        uses: actions/deploy-pages@v4
