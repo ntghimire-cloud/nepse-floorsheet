@@ -1,0 +1,19 @@
+rows train 184011 test 160091
+base rate train 1.19% test 0.80%
+base rate by year: 2018:0.29%, 2019:0.34%, 2020:2.20%, 2021:2.89%, 2022:0.55%, 2023:0.68%, 2024:1.48%, 2025:0.53%, 2026:0.38%
+rule circuit आज (r1>=9.5): n=1289 P(circuit भोलि)=14.6% next_ret=0.97%
+rule circuit आज + close=high: n=1141 P(circuit भोलि)=15.9% next_ret=1.20%
+
+[logit] test AUC 0.799
+  प्रति दिन शीर्ष 1: n=660 hit=9.5% (base 0.80%) lift=11.9x  next_close_ret=-0.32%  next_open_ret=-0.33%
+  प्रति दिन शीर्ष 3: n=1980 hit=7.7% (base 0.80%) lift=9.5x  next_close_ret=-0.17%  next_open_ret=-0.30%
+  प्रति दिन शीर्ष 5: n=3300 hit=6.9% (base 0.80%) lift=8.6x  next_close_ret=-0.04%  next_open_ret=-0.32%
+  शीर्ष 5% bucket: hit 5.7%  next_ret 0.18%
+
+[gbm] test AUC 0.824
+  प्रति दिन शीर्ष 1: n=660 hit=10.5% (base 0.80%) lift=13.0x  next_close_ret=-0.03%  next_open_ret=-0.24%
+  प्रति दिन शीर्ष 3: n=1980 hit=8.7% (base 0.80%) lift=10.8x  next_close_ret=0.19%  next_open_ret=-0.25%
+  प्रति दिन शीर्ष 5: n=3300 hit=7.6% (base 0.80%) lift=9.5x  next_close_ret=0.20%  next_open_ret=-0.23%
+  शीर्ष 5% bucket: hit 6.1%  next_ret 0.43%
+
+logit coef (standardized): volat20:+0.52, dist200:+0.47, vol_ratio:+0.30, close_loc:+0.26, r120:-0.15, r1_prev:-0.14, up_streak:+0.13, circ_today:+0.13
