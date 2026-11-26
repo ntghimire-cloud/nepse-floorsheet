@@ -1,0 +1,79 @@
+symbol,group,ref_price,eps_q1a,eps_ly,pb_ref,roe,npl,car,note,period,source
+GBIME,Commercial Banks,282.8,23.35,,1.61,13.3,4.79,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NMB,Commercial Banks,290.8,23.83,,1.56,12.8,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+PCBL,Commercial Banks,278.8,22.67,,1.54,12.5,7.15,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NBL,Commercial Banks,317.9,22.65,,1.09,7.7,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+KBL,Commercial Banks,237.3,16.39,,1.38,9.5,8.72,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NIMB,Commercial Banks,212.4,13.85,,1.06,6.9,8.87,,वितरणयोग्य नाफा ऋणात्मक,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+MBL,Commercial Banks,277.1,17.71,,1.69,10.8,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SANIMA,Commercial Banks,409.8,26.11,,2.21,14.1,2.86,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+HBL,Commercial Banks,208,11.60,,1.15,6.4,7.98,,वितरणयोग्य नाफा ऋणात्मक,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NABIL,Commercial Banks,552,30.34,,2.36,13.0,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+PRVU,Commercial Banks,189.2,10.26,,1.32,7.1,14.80,,वितरणयोग्य नाफा ऋणात्मक,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+EBL,Commercial Banks,718,34.78,,2.95,14.3,0.50,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SBI,Commercial Banks,434.9,19.49,,2.18,9.8,3.19,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SBL,Commercial Banks,437,18.77,,2.19,9.4,3.70,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SCB,Commercial Banks,682.9,26.74,,2.94,11.5,1.83,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+LSL,Commercial Banks,288.5,9.76,,1.62,5.5,5.58,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+CZBIL,Commercial Banks,226,2.68,,1.45,1.7,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NICA,Commercial Banks,324.9,3.42,,1.88,2.0,9.81,,वितरणयोग्य नाफा ऋणात्मक,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+ADBL,Commercial Banks,343,-1.51,,1.47,,,,Q1 घाटा,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+API,Hydro Power,319.2,15.42,14.12,2.74,,,,Q1 नाफा स्थिर; ऋण ≈ पूँजी,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+MEN,Hydro Power,671,37.49,25.8,4.19,,,,Q1 नाफा −30.9%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+UPPER,Hydro Power,190.5,31.23,4.37,3.64,,,,ऋण पूँजीको 6.2 गुणा,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SHPC,Hydro Power,563,56.87,7.85,3.70,,,,Q1 नाफामा करिब रु 31 करोड एकपटके आम्दानी,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+BPCL,Hydro Power,694,9.65,9.77,3.26,,,,ऋण लगभग छैन,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+TPC,Hydro Power,363,31.84,,3.3,,,,ब्याज खर्च घटेर नाफा बढेको,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SMHL,Hydro Power,484,26.16,,4.4,,,,ब्याज खर्च घटेर नाफा बढेको,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+AKPL,Hydro Power,256,,2.05,2.5,,,,,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NYADI,Hydro Power,335,-1,,5.3,,,,Q1 घाटा; ऋण पूँजीको 4.4 गुणा,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+CHCL,Hydro Power,330,0.39,,2.67,,,,Q1 नाफा −95.5%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+RNLI,Life Insurance,459,17.65,11.22,3.01,,,,Q1 नाफा −11.4%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SNLI,Life Insurance,421.5,18.57,7.92,2.78,,,,Q1 नाफा +2.4%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SRLI,Life Insurance,379,11.99,7.66,3.21,,,,Q1 नाफा +0.4%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+ALICL,Life Insurance,435.9,12.28,,3.54,,,,Q1 नाफा +5.8%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+ILI,Life Insurance,439.4,11.30,11.69,3.16,,,,Q1 नाफा −10.8%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+PMLI,Life Insurance,430.1,7.00,7.09,3.58,,,,Q1 नाफा +45.9%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NLIC,Life Insurance,743,,4.92,5.8,,,,Q1 नाफा −28.8%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+LICN,Life Insurance,805,,7.39,4.5,,,,Q1 नाफा −10.5%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+NTC,Others,950.6,,49.25,1.67,,,,ऋण छैन; Q1 नाफा +37% (मुख्यतः कर घटेर),FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+KDL,Hotels And Tourism,462,,9.17,4.26,,,,Q1 मा सानो घाटा,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+CIT,Investment,1705,,19.85,10.85,,,,नाफा स्थिर,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+SHL,Hotels And Tourism,555,,6.48,18.55,,,,Q1 नाफा +15%; ऋण छैन,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+HIDCL,Investment,251,,2.73,2.22,,,,Q1 नाफा −21%,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+CGH,Hotels And Tourism,712.6,,5.13,6.63,,,,Q1 मा नाफामा फर्कियो; ऋण ≈ पूँजी,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+TRH,Hotels And Tourism,860,-1,,7.35,,,,होटल क्षतिग्रस्त; सञ्चालन आम्दानी छैन,FY2083/84 Q1 (unaudited),claude/anya-samuha-tulana-2026-11-25.md
+LBBL,Development Banks,532,36.11,,2.46,16.7,6.99,,वितरणयोग्य नाफा प्रतिसेयर रु 18.36,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+JBBL,Development Banks,364,18.21,,2.10,10.5,7.17,,नाफा +184.6%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+KSBBL,Development Banks,482,21.9,,2.98,14,3.93,12.97,नाफा +17% (EPS 20.68–23.13 को बीच),FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+MNBBL,Development Banks,349,16.12,,2.11,9.7,4.73,,Q1 वितरणयोग्य नाफा घाटामा,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+SHINE,Development Banks,412.7,14.85,,2.88,10.4,4.71,,नाफा −2.7%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+GBBL,Development Banks,416,14.50,,2.67,9.3,4.81,,नाफा −4.2%; नेटवर्थ −12%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+MDB,Development Banks,569.8,11.26,,3.92,7.7,0.41,,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+DDBL,Microfinance,870,42.81,,3.68,18.1,6.70,15.04,नाफा +8.8%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+LLBS,Microfinance,783,30.13,,3.70,14.2,12.12,11.03,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+JBLB,Microfinance,1275,46.03,,3.89,14.1,5.90,13.74,नाफा +38%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+CBBL,Microfinance,983,30.23,,3.79,11.6,2.23,17.22,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+NUBL,Microfinance,599,16.84,,2.65,7.5,13.16,12.50,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+SWBBL,Microfinance,690,14.38,,2.81,5.9,9.79,10.94,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+SKBBL,Microfinance,749,14.91,,3.33,6.6,3.19,17.14,नाफा −19.6%,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+MLBBL,Microfinance,905,67.93,,5.04,,15.96,12.27,नाफा प्रोभिजन फिर्ताबाट; वितरणयोग्य नाफा ऋणात्मक,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+NICLBSL,Microfinance,500,25.56,,,,,,सञ्चित घाटा रु 86.7 करोड,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+FMDBL,Microfinance,722,5.29,,5.2,,,36.91,,FY2083/84 Q1 (unaudited),claude/bikas-bank-laghubitta-tulana-2026-11-26.md
+BNT,Manufacturing And Processing,13348,1150.7,544.9,3.55,14.5,,,Q1 नाफा +26.9%; ऋण घट्दो,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+UNL,Manufacturing And Processing,48600,,1678,8.34,28.8,,,Q1 नाफा −15.9% (दान खर्च); ऋण छैन; EPS TTM,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+BNL,Manufacturing And Processing,14600,637.5,420,3.82,11.0,,,Q1 नाफा +6.5%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+HDL,Manufacturing And Processing,1350,23.32,32.71,9.15,22.2,,,Q1 नाफा +138%; ऋण छैन; Q1 मौसमी रूपमा सुस्त,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SARBTM,Manufacturing And Processing,804,7.96,21.2,4.01,10.6,,,Q1 नाफा −68%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SONA,Manufacturing And Processing,435,2.51,10.96,2.16,5.4,,,Q1 नाफा −55.8%; ऋण रु 6.43 अर्ब,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SHIVM,Manufacturing And Processing,665,5.04,14.03,3.50,7.4,,,Q1 नाफा −66% (सिमेन्ट Q1 वर्षायाम),FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+RSML,Manufacturing And Processing,2760,63.0,21,5.64,4.3,,,Q1 नाफा +342%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+ECL,Manufacturing And Processing,1085,14.47,9.67,9.03,8.1,,,Q1 नाफा +82%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SAPIL,Manufacturing And Processing,967,12.61,,9.27,,,,Q1 नाफा +50.8%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SYPNL,Manufacturing And Processing,1230,6.47,6.28,10.86,5.5,,,Q1 नाफा +433%,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SOPL,Manufacturing And Processing,612,,2.23,6.35,2.3,,,Q1 प्रकाशित छैन,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SAIL,Manufacturing And Processing,876,2.61,,8.05,,,,ब्याज कभर 1.76,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+PCIL,Manufacturing And Processing,531,-1,1.23,4.23,1.0,,,Q1 घाटा रु 13.76 करोड; ऋण रु 5.14 अर्ब,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+GCIL,Manufacturing And Processing,340,-1,-6.13,2.09,,,,घाटा बढ्यो; ऋण रु 8.85 अर्ब,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+SAGAR,Manufacturing And Processing,1475,-1,-7.89,12.38,,,,घाटा घट्यो,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md
+OMPL,Manufacturing And Processing,682,-1,-1,7.11,,,,घाटा घट्यो; D/E 1.57,FY2083/84 Q1 (unaudited),claude/utpadan-kshetra-tulana-2026-11-25.md

@@ -72,8 +72,15 @@ const extra={};
 if(extraBase){
   const zlib=require('zlib');const base=extraBase;
   const rd=f=>{const L=zlib.gunzipSync(fs.readFileSync(f)).toString().trim().split(/\r?\n/);const H=L[0].split(',');return L.slice(1).map(l=>{const p=l.split(',');const o={};H.forEach((k,j)=>o[k]=p[j]);return o})};
+  // 1) official day prices (data/prices_full, from NEPSE) for the last 10 saved days
+  const fdir=path.join(base,'prices_full');const done=new Set();
+  const fdates=fs.existsSync(fdir)?fs.readdirSync(fdir).filter(x=>x.endsWith('.csv.gz')).map(x=>x.slice(0,10)).sort().slice(-10):[];
+  for(const ds of fdates){done.add(ds);
+    for(const r of rd(path.join(fdir,ds+'.csv.gz'))){const c=+r.closePrice,pc=+r.previousDayClosePrice;if(!(c>0))continue;
+      (extra[r.symbol]??=[]).push({ds,o:+r.openPrice||c,h:Math.max(+r.highPrice||c,c),l:Math.min(+r.lowPrice||c,c),c,v:+r.totalTradedQuantity||0,pc:pc>0?(c/pc-1)*100:NaN})}}
+  // 2) otherwise close/% change from data/prices + open/high/low/volume from that day's floorsheet
   const pdir=path.join(base,'prices');
-  const dates=fs.existsSync(pdir)?fs.readdirSync(pdir).filter(x=>x.endsWith('.csv.gz')).map(x=>x.slice(0,10)).sort().slice(-10):[];
+  const dates=fs.existsSync(pdir)?fs.readdirSync(pdir).filter(x=>x.endsWith('.csv.gz')).map(x=>x.slice(0,10)).sort().slice(-10).filter(d=>!done.has(d)):[];
   for(const ds of dates){
     const ff=path.join(base,'floorsheet',ds+'.csv.gz');if(!fs.existsSync(ff))continue;
     const fs_={};
@@ -87,7 +94,7 @@ for(const f of fs.readdirSync(dir).filter(x=>x.endsWith('.csv'))){
   if(/(BD|D)\d{2,}$/.test(sym)||/D\d{4}/.test(sym))continue;
   const L=fs.readFileSync(path.join(dir,f),'utf8').trim().split(/\r?\n/);const H=L[0].split(',');const ix=k=>H.indexOf(k);
   let rows=[];for(const l of L.slice(1)){const p=l.split(',');const r={ds:p[ix('published_date')],o:+p[ix('open')],h:+p[ix('high')],l:+p[ix('low')],c:+p[ix('close')],v:+p[ix('traded_quantity')]||0,pc:parseFloat(p[ix('per_change')])};if(r.c>0)rows.push(r)}
-  if(extra[sym]){const last=rows.length?rows[rows.length-1].ds:'';for(const e of extra[sym])if(e.ds>last)rows.push(e)}
+  if(extra[sym]){const last=rows.length?rows[rows.length-1].ds:'';for(const e of extra[sym].sort((x,y)=>x.ds<y.ds?-1:1))if(e.ds>(rows.length?rows[rows.length-1].ds:last))rows.push(e)}
   if(rows.length<60)continue;
   let f_=1;const fac=new Array(rows.length).fill(1);
   for(let i=rows.length-1;i>0;i--){fac[i]=f_;const pc=rows[i].pc;if(!isFinite(pc)||pc<=-100)continue;const prev=rows[i-1].c;

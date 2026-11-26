@@ -14,6 +14,7 @@ if (!pw) {
 }
 const key = crypto.pbkdf2Sync(pw, SALT, ITER, 32, 'sha256');
 for (const f of files) {
+  if (!fs.existsSync(f)) { console.log('missing, skipped:', f); continue; }
   const iv = crypto.randomBytes(12);
   const c = crypto.createCipheriv('aes-256-gcm', key, iv);
   const ct = Buffer.concat([c.update(zlib.gzipSync(fs.readFileSync(f))), c.final(), c.getAuthTag()]);

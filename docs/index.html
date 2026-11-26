@@ -16,7 +16,8 @@ h1{font-size:20px;margin:0 0 4px}
 .chip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:110px}
 .chip b{display:block;font-size:20px}
 .chip span{color:var(--mute);font-size:12px}
-nav{max-width:1280px;margin:8px auto 0;padding:0 20px;display:flex;gap:4px;border-bottom:1px solid var(--line)}
+nav{max-width:1280px;margin:8px auto 0;padding:0 20px;display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{white-space:nowrap}
 nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;color:var(--mute);font:inherit;cursor:pointer}
 nav button.on{color:var(--ink);border-color:var(--acc);font-weight:600}
 main{max-width:1280px;margin:auto;padding:16px 20px 40px}
@@ -65,17 +66,69 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
   <div class="chips" id="chips"></div>
 </header>
 <nav>
-  <button data-t="stocks" class="on">शेयरहरू</button>
-  <button data-t="ind">Indicator र weight</button>
-  <button data-t="method">विधि र सीमा</button>
+  <button data-t="mkt" class="on">बजार</button>
+  <button data-t="sec">क्षेत्र</button>
+  <button data-t="stocks">शेयरहरू</button>
+  <button data-t="cmp">तुलना</button>
+  <button data-t="brk">ब्रोकर</button>
+  <button data-t="pp">Push / Pull</button>
+  <button data-t="acc">Accumulation</button>
+  <button data-t="ind">Indicator</button>
+  <button data-t="method">विधि</button>
 </nav>
 <main>
-  <section id="t-stocks">
+  <section id="t-mkt">
+    <div class="grid" id="idxCards" style="margin-bottom:14px"></div>
+    <div class="card"><b>बजार सूचक (market cap भारित, आफैं गणना गरिएको)</b> <span class="note" id="capNote"></span>
+      <div class="legend"><span><i style="background:var(--acc)"></i>सबै कम्पनी (cap-weighted)</span><span><i style="background:var(--watch)"></i>NEPSE आधिकारिक (जम्मा भएका दिन)</span></div><canvas id="cvMkt" height="240"></canvas></div>
+    <div class="two">
+      <div class="card"><b>कारोबार रकम (रु. करोड)</b><canvas id="cvTurn" height="150"></canvas></div>
+      <div class="card"><b>Breadth: 50 दिने औसत माथि रहेका शेयर %</b><canvas id="cvBreadth" height="150"></canvas></div>
+    </div>
+    <div class="card" id="mktSummary"></div>
+    <div class="two"><div class="card"><b>आजका बढी बढ्ने</b><table id="tGain"></table></div><div class="card"><b>आजका बढी घट्ने</b><table id="tLose"></table></div></div>
+    <div class="card"><b>सबैभन्दा बढी कारोबार</b><table id="tTurn"></table></div>
+  </section>
+  <section id="t-sec" hidden>
+    <div class="card"><b>क्षेत्रगत अवस्था</b> <span class="note">प्रतिफल = क्षेत्रभित्रका कम्पनीको market cap भारित सूचक। कारोबार 5/20 &gt; 1 भए हालै पैसा बढी आइरहेको।</span>
+      <div class="tw"><table id="secTbl"><thead></thead><tbody></tbody></table></div></div>
+    <div class="card"><b>क्षेत्र तुलना (प्रतिफल %)</b><div class="tools" style="margin-top:6px"><select id="secPer"><option value="r5">5 दिन</option><option value="r20" selected>20 दिन</option><option value="r60">60 दिन</option><option value="r120">120 दिन</option><option value="r250">1 वर्ष (उपलब्ध)</option></select></div><canvas id="cvSec" height="260"></canvas></div>
+    <div id="secDetail"></div>
+  </section>
+  <section id="t-cmp" hidden>
+    <div class="card">
+      <div class="tools"><input id="cmpIn" list="symList" placeholder="सिम्बोल थप्नुहोस् (४ सम्म)" size="22"><datalist id="symList"></datalist>
+      <select id="cmpPer"><option value="60">3 महिना</option><option value="120" selected>6 महिना</option><option value="250">1 वर्ष</option></select>
+      <span id="cmpChips"></span></div>
+      <div class="legend" id="cmpLegend"></div><canvas id="cvCmp" height="260"></canvas>
+      <p class="note">सुरु दिनको मूल्य = 100 मानेर। बोनस/हकप्रद समायोजित।</p>
+    </div>
+    <div class="card"><div class="tw"><table id="cmpTbl"></table></div></div>
+  </section>
+  <section id="t-brk" hidden>
+    <div class="card">
+      <div class="tools"><select id="brkPer"><option value="today">आज</option><option value="thisWeek">यो हप्ता</option><option value="lastWeek">अघिल्लो हप्ता</option><option value="last5">पछिल्ला 5 कारोबार दिन</option></select>
+      <input id="brkQ" placeholder="ब्रोकर नं." size="8"><span class="note" id="brkNote"></span></div>
+      <div class="tw"><table id="brkTbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+    <div id="brkDetail"></div>
+  </section>
+  <section id="t-pp" hidden>
+    <div class="card"><b class="p">खरिद Pull (आज)</b> <span class="note">मूल्य +2% वा बढी, close दिनको माथिल्लो 30% मा, volume 20 दिने औसतको 1.5× वा बढी, दैनिक कारोबार रु. 2 लाख+।</span><div class="tw"><table id="pullTbl"></table></div></div>
+    <div class="card"><b class="n">बिक्री Push (आज)</b> <span class="note">मूल्य −2% वा कम, close दिनको तल्लो 30% मा, volume 1.5× वा बढी।</span><div class="tw"><table id="pushTbl"></table></div></div>
+  </section>
+  <section id="t-acc" hidden>
+    <div class="warn" id="accNote"></div>
+    <div class="card"><b class="p">Accumulation (पछिल्ला 5 दिन)</b><div class="tw"><table id="accTbl"></table></div></div>
+    <div class="card"><b class="n">Distribution (पछिल्ला 5 दिन)</b><div class="tw"><table id="distTbl"></table></div></div>
+  </section>
+  <section id="t-stocks" hidden>
     <div class="warn" id="warnScore"></div>
     <div class="card">
       <div class="tools">
         <input id="q" placeholder="सिम्बोल खोज्नुहोस्…" size="18">
         <select id="fsig"><option value="">सबै सङ्केत</option><option value="buy">किन्न योग्य</option><option value="watch">निगरानी</option><option value="hold">होल्ड</option><option value="sell">बिक्री/सावधान</option></select>
+        <select id="fsec"><option value="">सबै क्षेत्र</option></select>
         <select id="fnew"><option value="">सबै</option><option value="new">आज नयाँ सङ्केत मात्र</option></select>
         <span class="note" id="cnt"></span>
       </div>
@@ -127,14 +180,14 @@ const $=s=>document.querySelector(s);
 const f=(x,d=1)=>x==null||!isFinite(x)?'–':Number(x).toFixed(d);
 const sg=(x,d=1)=>{if(x==null||!isFinite(x))return '–';const t=Number(x).toFixed(d);return /^-0(\.0+)?$/.test(t)?t.slice(1):(x>0?'+':'')+t};
 const cls=x=>x>0?'p':x<0?'n':'m';
-let D,B,rows=[],sortK='sc',sortDir=-1;
+let D,B,M=null,BR=null,rows=[],sortK='sc',sortDir=-1;
 
 // ---- password lock: data is published only as AES-256-GCM (key = PBKDF2-SHA256 of the password); see scripts/encrypt_data.js
 const SALT='ntghimire-cloud/nepse-floorsheet:v1',ITER=310000,KS='nepseDashKey';
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function deriveKey(pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode(SALT),iterations:ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},true,['decrypt'])}
 async function dec(key,url){const j=await (await fetch(url,{cache:'no-cache'})).json();const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.iv)},key,b64(j.ct));return JSON.parse(await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text())}
-async function openWith(key){const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
+async function openWith(key){const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}try{M=await dec(key,'data/market.enc')}catch(e){M=null}try{BR=await dec(key,'data/brokers.enc')}catch(e){BR=null}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
 function showLock(msg){$('#lock').hidden=false;$('#sub').textContent='';$('#lockMsg').textContent=msg||'';$('#pw').focus()}
 (async()=>{
   let st={};try{st=await (await fetch('data/status.json',{cache:'no-cache'})).json()}catch(e){}
@@ -168,28 +221,29 @@ function init(){
   $('#warnScore').innerHTML=s7?`<b>ध्यान दिनुहोस्:</b> 2018–2026 को backtest मा "किन्न योग्य" (अङ्क ≥7) शेयरले अर्को 20 दिनमा बजारभन्दा औसत ${sg(s7.train.ex,2)}% (2018–23) र ${sg(s7.test.ex,2)}% (2024–26) मात्र गरे — भरपर्दो बढी प्रतिफल देखिएन। यो सूची अध्ययन सुरु गर्ने ठाउँ हो, खरिद सिफारिस होइन। विवरण "Indicator र weight" ट्याबमा।`:'';
   rows=D.stocks;
   buildTable();buildInd();buildMethod();
-  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));['stocks','ind','method'].forEach(t=>$('#t-'+t).hidden=t!==b.dataset.t)});
-  ['q','fsig','fnew'].forEach(id=>$('#'+id).oninput=renderRows);
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));TABS.forEach(t=>$('#t-'+t).hidden=t!==b.dataset.t);onTab(b.dataset.t)});
+  ['q','fsig','fnew','fsec'].forEach(id=>$('#'+id).oninput=renderRows);
+  initExtra();
   $('#detail').onclick=e=>{if(e.target.id==='detail')closeD()};
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
   const goHash=()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&D.stocks.find(s=>s.sym===h))openD(h)};goHash();window.addEventListener('hashchange',goHash);
 }
 
-const COLS=[['sym','सिम्बोल'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %']];
-function val(s,k){if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
+const COLS=[['sym','सिम्बोल'],['sec','क्षेत्र'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %']];
+function val(s,k){if(k==='sec')return secOf(s.sym)||'';if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
 function buildTable(){
-  $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<2?'l':''}">${n}</th>`).join('')+'</tr>';
+  $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<3?'l':''}">${n}</th>`).join('')+'</tr>';
   $('#tbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=k==='sym'?1:-1}renderRows()};
   $('#tbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)openD(tr.dataset.s)};
   renderRows();
 }
 function renderRows(){
-  const q=$('#q').value.trim().toUpperCase(),fs=$('#fsig').value,fn=$('#fnew').value;
-  let r=rows.filter(s=>(!q||s.sym.includes(q))&&(!fs||s.sig===fs)&&(!fn||s.sig!==s.prevSig));
+  const q=$('#q').value.trim().toUpperCase(),fs=$('#fsig').value,fn=$('#fnew').value,fc=$('#fsec').value;
+  let r=rows.filter(s=>(!q||s.sym.includes(q))&&(!fs||s.sig===fs)&&(!fn||s.sig!==s.prevSig)&&(!fc||secOf(s.sym)===fc));
   r.sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir||b.sc-a.sc});
   $('#cnt').textContent=r.length+' शेयर';
   $('#tbl tbody').innerHTML=r.map(s=>{const d=val(s,'dsc');const isNew=s.prevSig&&s.sig!==s.prevSig;const b3=val(s,'b3');
-    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td></tr>`}).join('');
+    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l note">${secShort(secOf(s.sym))}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td></tr>`}).join('');
 }
 
 function buildInd(){
@@ -256,10 +310,12 @@ function openD(sym){
    ${kv('5 दिन',`<span class="${cls(m.r5)}">${sg(m.r5,1)}%</span>`)}${kv('20 दिन',`<span class="${cls(m.r20)}">${sg(m.r20,1)}%</span>`)}${kv('60 / 120 दिन',`<span class="${cls(m.r60)}">${sg(m.r60,1)}</span> / <span class="${cls(m.r120)}">${sg(m.r120,1)}%</span>`)}
   </div></div></div>
   <div class="card"><b>अङ्कको हिसाब</b><table style="margin-top:6px"><thead><tr><th class="l">Indicator</th><th class="l">आजको अवस्था</th><th>अङ्क</th><th class="l">ऐतिहासिक रूपमा</th></tr></thead><tbody>${rs}<tr style="cursor:default"><td class="l" colspan="2"><b>जम्मा</b></td><td><b>${sg(s.sc,0)}</b></td><td></td></tr></tbody></table></div>
+  ${extraDetail(s)}
   <div class="card"><b>आजको floorsheet: ब्रोकर</b><div style="margin-top:8px">${brk}</div></div>
   <p class="note">यो नियममा आधारित प्राविधिक स्क्रिनिङ मात्र हो, लगानी सल्लाह होइन।</p>`;
   $('#detail').style.display='block';document.body.style.overflow='hidden';$('#detail').scrollTop=0;
   requestAnimationFrame(()=>{drawPrice($('#cv'),s);drawScore($('#cv2'),s)});
+  $('#dbox').querySelectorAll('[data-s]').forEach(e=>e.onclick=()=>openD(e.dataset.s));
 }
 
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
@@ -295,5 +351,216 @@ function drawScore(cv,s){
   g.fillStyle=css('--mute');g.fillText(S[0][0],pad.l,h-2);g.fillText(S[S.length-1][0],w-72,h-2);
 }
 </script>
+<script>
+// ===================== बजार, क्षेत्र, तुलना, ब्रोकर, flows =====================
+const TABS=['mkt','sec','stocks','cmp','brk','pp','acc','ind','method'];
+const SECNP={'Commercial Banks':'वाणिज्य बैंक','Development Banks':'विकास बैंक','Finance':'वित्त','Hotels And Tourism':'होटल/पर्यटन','Hydro Power':'जलविद्युत','Investment':'लगानी','Life Insurance':'जीवन बीमा','Manufacturing And Processing':'उत्पादन','Microfinance':'लघुवित्त','Non Life Insurance':'निर्जीवन बीमा','Others':'अन्य','Tradings':'व्यापार'};
+const secOf=sym=>M&&M.sectorOf?M.sectorOf[sym]:null;
+const secShort=s=>s?(SECNP[s]||s):'–';
+const crore=x=>x==null?'–':(x/1e7).toFixed(2);
+const lakh=x=>x==null?'–':(x/1e5).toFixed(1);
+const num=x=>x==null?'–':Math.round(x).toLocaleString('en-IN');
+const symLink=s=>`<a href="#${s}" data-s="${s}" style="color:inherit;font-weight:600;text-decoration:none">${s}</a>`;
+const PAL=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e8590c','#1098ad','#5c940d','#c2255c','#495057','#f08c00','#364fc7','#087f5b'];
+let cmpSyms=[];const drawn={};
+
+function initExtra(){
+  if(!M){$('#idxCards').innerHTML='<div class="warn">बजार डाटा (market.enc) अझै बनेको छैन।</div>';}
+  const secs=[...new Set(Object.values(M?.sectorOf||{}))].sort();
+  $('#fsec').innerHTML='<option value="">सबै क्षेत्र</option>'+secs.map(s=>`<option value="${s}">${secShort(s)}</option>`).join('');
+  $('#symList').innerHTML=D.stocks.map(s=>`<option value="${s.sym}">`).join('');
+  document.body.addEventListener('click',e=>{const a=e.target.closest('a[data-s]');if(a){e.preventDefault();openD(a.dataset.s)}});
+  buildFlows();buildBrokerTable();
+  $('#brkPer').oninput=buildBrokerTable;$('#brkQ').oninput=buildBrokerTable;
+  $('#secPer').oninput=()=>drawSecBars();
+  $('#cmpIn').onchange=()=>{const v=$('#cmpIn').value.trim().toUpperCase();if(D.stocks.find(s=>s.sym===v)&&!cmpSyms.includes(v)&&cmpSyms.length<4){cmpSyms.push(v);renderCmp()}$('#cmpIn').value=''};
+  $('#cmpPer').oninput=renderCmp;
+  if(!cmpSyms.length){const top=D.stocks.filter(s=>s.sig==='buy').slice(0,2).map(s=>s.sym);cmpSyms=top.length?top:D.stocks.slice(0,2).map(s=>s.sym)}
+  onTab('mkt');
+}
+function onTab(t){
+  if(t==='mkt'&&!drawn.mkt){buildMarket();drawn.mkt=1}
+  if(t==='sec'&&!drawn.sec){buildSectors();drawn.sec=1}
+  if(t==='cmp'){renderCmp()}
+}
+
+// ---------- generic charts ----------
+function lineChart(cv,series,{pct=false,base=null,zero=false,fmt=v=>v.toFixed(0)}={}){
+  const [g,w,h]=setup(cv);const pad={l:52,r:10,t:10,b:20};
+  const all=series.flatMap(s=>s.data.map(p=>p[1])).filter(v=>v!=null&&isFinite(v));if(!all.length){g.fillStyle=css('--mute');g.fillText('डाटा छैन',w/2-20,h/2);return}
+  let lo=Math.min(...all),hi=Math.max(...all);if(zero){lo=Math.min(lo,0);hi=Math.max(hi,0)}const padv=(hi-lo)*0.05||1;lo-=padv;hi+=padv;
+  const dates=[...new Set(series.flatMap(s=>s.data.map(p=>p[0])))].sort();const di=Object.fromEntries(dates.map((d,i)=>[d,i]));
+  const X=i=>pad.l+i/Math.max(1,dates.length-1)*(w-pad.l-pad.r),Y=v=>pad.t+(hi-v)/(hi-lo)*(h-pad.t-pad.b);
+  g.font='11px system-ui';g.strokeStyle=css('--line');g.fillStyle=css('--mute');g.lineWidth=1;
+  for(let k=0;k<=4;k++){const v=lo+(hi-lo)*k/4;g.beginPath();g.moveTo(pad.l,Y(v));g.lineTo(w-pad.r,Y(v));g.stroke();g.fillText(fmt(v),4,Y(v)+4)}
+  if(base!=null){g.strokeStyle=css('--mute');g.setLineDash([4,4]);g.beginPath();g.moveTo(pad.l,Y(base));g.lineTo(w-pad.r,Y(base));g.stroke();g.setLineDash([])}
+  for(const s of series){g.strokeStyle=s.color;g.lineWidth=s.w||1.8;g.beginPath();let on=false;for(const [d,v] of s.data){if(v==null){on=false;continue}const x=X(di[d]),y=Y(v);on?g.lineTo(x,y):g.moveTo(x,y);on=true}g.stroke()}
+  g.fillStyle=css('--mute');g.fillText(dates[0],pad.l,h-4);g.fillText(dates.at(-1),w-pad.r-64,h-4);
+}
+function barChart(cv,data,{color='--acc',fmt=v=>v.toFixed(0)}={}){
+  const [g,w,h]=setup(cv);const pad={l:44,r:8,t:8,b:20};const vals=data.map(d=>d[1]);const hi=Math.max(...vals,1);
+  const bw=(w-pad.l-pad.r)/data.length;g.font='11px system-ui';g.fillStyle=css('--mute');g.strokeStyle=css('--line');
+  for(let k=0;k<=3;k++){const v=hi*k/3,y=pad.t+(1-k/3)*(h-pad.t-pad.b);g.beginPath();g.moveTo(pad.l,y);g.lineTo(w-pad.r,y);g.stroke();g.fillText(fmt(v),2,y+4)}
+  data.forEach((d,i)=>{const bh=d[1]/hi*(h-pad.t-pad.b);g.fillStyle=css(color);g.fillRect(pad.l+i*bw+1,h-pad.b-bh,Math.max(1,bw-2),bh)});
+  g.fillStyle=css('--mute');g.fillText(data[0]?.[0]||'',pad.l,h-4);g.fillText(data.at(-1)?.[0]||'',w-pad.r-64,h-4);
+}
+
+// ---------- बजार ----------
+function buildMarket(){
+  if(!M)return;
+  const o=M.official;const cards=[];
+  if(o&&o.indices)for(const x of o.indices){const v=x.close??x.currentValue;cards.push(`<div class="kv"><span>${x.index}${o.date?` · ${o.date}`:''}</span><b>${f(v,2)}</b> <span class="${cls(x.perChange)}" style="display:inline">${sg(x.perChange,2)}% (${sg(x.change,2)})</span>${x.fiftyTwoWeekHigh?`<div class="note">52 हप्ता: ${f(x.fiftyTwoWeekLow,0)} – ${f(x.fiftyTwoWeekHigh,0)}</div>`:''}</div>`)}
+  const mk=M.market;
+  if(mk)cards.push(`<div class="kv"><span>बढ्ने / घट्ने / स्थिर</span><b><span class="p">${mk.adv}</span> / <span class="n">${mk.dec}</span> / ${mk.unch}</b></div>`,`<div class="kv"><span>कारोबार (रु. करोड)</span><b>${crore(mk.turnover)}</b> <span class="note">${mk.turnVs20?f(mk.turnVs20,2)+'× 20 दिने औसत':''}</span></div>`);
+  $('#idxCards').innerHTML=cards.join('')||'<div class="note">आधिकारिक सूचक अझै जम्मा भएको छैन (आजको workflow पछि आउँछ)।</div>';
+  $('#capNote').textContent=M.priceFrom?`(${M.priceFrom} देखि, ${M.priceDays} कारोबार दिन)`:'';
+  const cap=M.capIndex||[];const off=(M.officialHist||[]).filter(x=>x[1]!=null);
+  const series=[{data:cap,color:css('--acc')}];
+  if(off.length&&cap.length){const c0=cap.find(x=>x[0]===off[0][0]);if(c0){const k=c0[1]/off[0][1];series.push({data:off.map(([d,v])=>[d,v*k]),color:css('--watch'),w:2.4})}}
+  lineChart($('#cvMkt'),series);
+  if(mk){barChart($('#cvTurn'),mk.turnHist.map(([d,v])=>[d,v/1e7]),{fmt:v=>v.toFixed(0)});
+    $('#mktSummary').innerHTML=`<b>सारांश (${mk.date})</b><div class="grid" style="margin-top:8px">
+      <div class="kv"><span>बजार (cap-weighted) 1 / 5 / 20 दिन</span><b><span class="${cls(mk.r1)}">${sg(mk.r1,2)}</span> / <span class="${cls(mk.r5)}">${sg(mk.r5,2)}</span> / <span class="${cls(mk.r20)}">${sg(mk.r20,2)}%</span></b></div>
+      <div class="kv"><span>60 दिन / 1 वर्ष</span><b><span class="${cls(mk.r60)}">${sg(mk.r60,2)}</span> / <span class="${cls(mk.r250)}">${sg(mk.r250,2)}%</span></b></div>
+      <div class="kv"><span>कारोबार सङ्ख्या</span><b>${num(mk.trades)}</b></div><div class="kv"><span>कित्ता</span><b>${num(mk.volume)}</b></div>
+      <div class="kv"><span>50 MA माथि</span><b>${Math.round((D.breadth||0)*100)}%</b></div>
+      <div class="kv"><span>स्क्यान: किन्न / बिक्री</span><b><span class="p">${D.counts.buy}</span> / <span class="n">${D.counts.sell}</span></b></div></div>`;
+    const t=(rows,cols)=>`<thead><tr>${cols.map((c,i)=>`<th class="${i?'':'l'}">${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+    $('#tGain').innerHTML=t(mk.gainers.map(([s,c,p])=>`<tr data-s="${s}"><td>${symLink(s)} <span class="note">${secShort(secOf(s))}</span></td><td>${f(p)}</td><td class="p">${sg(c,2)}%</td></tr>`).join(''),['सिम्बोल','LTP','%']);
+    $('#tLose').innerHTML=t(mk.losers.map(([s,c,p])=>`<tr data-s="${s}"><td>${symLink(s)} <span class="note">${secShort(secOf(s))}</span></td><td>${f(p)}</td><td class="n">${sg(c,2)}%</td></tr>`).join(''),['सिम्बोल','LTP','%']);
+    $('#tTurn').innerHTML=t(mk.topTurnover.map(([s,a,c])=>`<tr data-s="${s}"><td>${symLink(s)} <span class="note">${secShort(secOf(s))}</span></td><td>${crore(a)}</td><td class="${cls(c)}">${sg(c,2)}%</td></tr>`).join(''),['सिम्बोल','रु. करोड','%']);
+    document.querySelectorAll('#tGain tr[data-s],#tLose tr[data-s],#tTurn tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
+  }
+  lineChart($('#cvBreadth'),[{data:M.breadthHist||[],color:css('--acc')}],{base:50,fmt:v=>v.toFixed(0)+'%'});
+}
+
+// ---------- क्षेत्र ----------
+let secSort='r20',secDir=-1;
+function buildSectors(){
+  if(!M)return;
+  const cols=[['sector','क्षेत्र'],['sub','उप-सूचक आज'],['r1','1 दिन %'],['r5','5 दिन %'],['r20','20 दिन %'],['r60','60 दिन %'],['r250','1 वर्ष %'],['trend','प्रवृत्ति'],['ad','बढ्ने/घट्ने'],['turnover','कारोबार करोड'],['turn5vs20','कारोबार 5/20'],['pctAbove50','50 MA माथि %'],['avgScore','औसत अङ्क'],['cnt','किन्न/बिक्री'],['ad5','Acc/Dist']];
+  $('#secTbl thead').innerHTML='<tr>'+cols.map(([k,n],i)=>`<th data-k="${k}" class="${i?'':'l'}">${n}</th>`).join('')+'</tr>';
+  $('#secTbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(secSort===k)secDir*=-1;else{secSort=k;secDir=-1}renderSec()};
+  $('#secTbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)secDetail(tr.dataset.sec)};
+  renderSec();drawSecBars();
+}
+function renderSec(){
+  const v=(x,k)=>k==='sub'?x.sub?.chg:k==='trend'?(x.aboveIdx50?1:0):k==='cnt'?x.cnt.buy-x.cnt.sell:k==='ad'?x.adv-x.dec:k==='ad5'?x.acc.length-x.dist.length:k==='sector'?secShort(x.sector):x[k];
+  const rs=[...M.sectors].sort((a,b)=>{const p=v(a,secSort),q=v(b,secSort);if(p==null)return 1;if(q==null)return -1;return (p>q?1:p<q?-1:0)*secDir});
+  $('#secTbl tbody').innerHTML=rs.map(x=>`<tr data-sec="${x.sector}"><td><b>${secShort(x.sector)}</b> <span class="note">${x.scanned}</span></td><td>${x.sub?`${f(x.sub.value,1)} <span class="${cls(x.sub.chg)}">${sg(x.sub.chg,2)}%</span>`:'–'}</td>
+   ${['r1','r5','r20','r60','r250'].map(k=>`<td class="${cls(x[k])}">${sg(x[k],2)}</td>`).join('')}<td>${x.aboveIdx50==null?'–':x.aboveIdx50?'<span class="p">50 दिने माथि ↑</span>':'<span class="n">तल ↓</span>'}</td>
+   <td><span class="p">${x.adv}</span>/<span class="n">${x.dec}</span></td><td>${crore(x.turnover)}</td><td class="${x.turn5vs20>1.15?'p':x.turn5vs20<0.85?'n':''}">${f(x.turn5vs20,2)}</td><td>${f(x.pctAbove50,0)}</td><td class="${cls(x.avgScore)}">${sg(x.avgScore,1)}</td>
+   <td><span class="p">${x.cnt.buy}</span>/<span class="n">${x.cnt.sell}</span></td><td><span class="p">${x.acc.length}</span>/<span class="n">${x.dist.length}</span></td></tr>`).join('');
+}
+function drawSecBars(){
+  if(!M)return;const k=$('#secPer').value;const cv=$('#cvSec');const [g,w,h]=setup(cv);
+  const rs=[...M.sectors].filter(x=>x[k]!=null).sort((a,b)=>b[k]-a[k]);const lo=Math.min(0,...rs.map(x=>x[k])),hi=Math.max(0,...rs.map(x=>x[k]));
+  const pad={l:110,r:50};const rowH=(h-10)/Math.max(1,rs.length);const X=v=>pad.l+(v-lo)/(hi-lo||1)*(w-pad.l-pad.r);
+  g.font='12px system-ui';rs.forEach((x,i)=>{const y=5+i*rowH;g.fillStyle=css('--ink');g.fillText(secShort(x.sector),4,y+rowH*0.65);g.fillStyle=x[k]>=0?css('--pos'):css('--neg');const a=X(0),b=X(x[k]);g.fillRect(Math.min(a,b),y+3,Math.abs(b-a)||1,rowH-6);g.fillStyle=css('--mute');g.fillText(sg(x[k],1)+'%',Math.max(a,b)+4,y+rowH*0.65)});
+}
+function fundRow(sym,c){
+  const F=M?.fundamentals?.[sym];if(!F)return null;
+  const eps=F.eps_q1a!==''?+F.eps_q1a:(F.eps_ly!==''?+F.eps_ly:null);const epsLy=F.eps_ly!==''?+F.eps_ly:null;
+  const bvps=F.pb_ref?+F.ref_price/+F.pb_ref:null;
+  return {F,eps,epsLy,pe:eps>0?c/eps:null,peLy:epsLy>0?c/epsLy:null,loss:eps!=null&&eps<0,bvps,pb:bvps?c/bvps:null,roe:F.roe!==''?+F.roe:null,npl:F.npl!==''?+F.npl:null,car:F.car!==''?+F.car:null};
+}
+function secDetail(sec){
+  const x=M.sectors.find(s=>s.sector===sec);if(!x)return;
+  const peers=D.stocks.filter(s=>secOf(s.sym)===sec).sort((a,b)=>b.sc-a.sc);
+  const fl=Object.fromEntries((M.flows||[]).map(f=>[f.sym,f]));
+  $('#secDetail').innerHTML=`<div class="card"><h3 style="margin-top:0">${secShort(sec)} <span class="note">${sec}</span></h3>
+   <canvas id="cvSecIdx" height="200"></canvas>
+   <p class="note">बढी बढ्ने: ${x.top.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')} · बढी घट्ने: ${x.bottom.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')}</p>
+   <b>समकक्षी तुलना</b><div class="tw"><table><thead><tr><th class="l">सिम्बोल</th><th>LTP</th><th>आज %</th><th>20 दिन %</th><th>60 दिन %</th><th>RSI</th><th>अङ्क</th><th class="l">सङ्केत</th><th>P/E</th><th>P/B</th><th>ROE %</th><th>NPL %</th><th>CMF 5</th><th class="l">5 दिन</th></tr></thead><tbody>
+   ${peers.map(s=>{const r=fundRow(s.sym,s.c);const q=fl[s.sym];return `<tr data-s="${s.sym}"><td>${symLink(s.sym)}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td class="${cls(s.m.r60)}">${sg(s.m.r60,1)}</td><td>${f(s.rsi,0)}</td><td>${sg(s.sc,0)}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span></td><td>${r?(r.loss?'<span class="n">घाटा</span>':f(r.pe,1)):'–'}</td><td>${r?f(r.pb,2):'–'}</td><td>${r?f(r.roe,1):'–'}</td><td>${r?f(r.npl,2):'–'}</td><td class="${cls(q?.cmf5)}">${f(q?.cmf5,2)}</td><td class="l">${q?.ad==='acc'?'<span class="p">Accumulation</span>':q?.ad==='dist'?'<span class="n">Distribution</span>':''}</td></tr>`}).join('')}</tbody></table></div>
+   <p class="note">P/E, P/B: आजको मूल्य ÷ प्रोजेक्टका तुलना डकमा भएको EPS/book value (आव 2083/84 Q1, अपरिष्कृत)। "–" = डाटा छैन।</p></div>`;
+  $('#secDetail').querySelectorAll('tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
+  lineChart($('#cvSecIdx'),[{data:x.series,color:css('--acc')},{data:(M.capIndex||[]).slice(-x.series.length).map(([d,v],i,a)=>[d,v/a[0][1]*x.series[0][1]]),color:css('--mute'),w:1.2}]);
+  $('#secDetail').scrollIntoView({behavior:'smooth'});
+}
+
+// ---------- तुलना ----------
+function renderCmp(){
+  $('#cmpChips').innerHTML=cmpSyms.map((s,i)=>`<span class="sig" style="background:${PAL[i]};cursor:pointer" data-x="${s}">${s} ✕</span>`).join(' ');
+  $('#cmpChips').querySelectorAll('[data-x]').forEach(e=>e.onclick=()=>{cmpSyms=cmpSyms.filter(z=>z!==e.dataset.x);renderCmp()});
+  const per=+$('#cmpPer').value;const st=cmpSyms.map(s=>D.stocks.find(x=>x.sym===s)).filter(Boolean);
+  $('#cmpLegend').innerHTML=st.map((s,i)=>`<span><i style="background:${PAL[i]}"></i>${s.sym}</span>`).join('');
+  lineChart($('#cvCmp'),st.map((s,i)=>{const H=s.hist.slice(-per);const b=H[0][4];return {data:H.map(r=>[r[0],r[4]/b*100]),color:PAL[i]}}),{base:100});
+  const fl=Object.fromEntries((M?.flows||[]).map(f=>[f.sym,f]));
+  const rowsDef=[['क्षेत्र',s=>secShort(secOf(s.sym))],['LTP',s=>f(s.c)],['आज %',s=>sg(s.chg,2)],['5 दिन %',s=>sg(s.m.r5,1)],['20 दिन %',s=>sg(s.m.r20,1)],['60 दिन %',s=>sg(s.m.r60,1)],['120 दिन %',s=>sg(s.m.r120,1)],
+   ['52 हप्ते उच्चबाट %',s=>sg((s.c/s.m.hi52-1)*100,1)],['RSI',s=>f(s.rsi,0)],['स्क्यान अङ्क',s=>sg(s.sc,0)],['सङ्केत',s=>`<span class="sig s-${s.sig}">${SIG[s.sig]}</span>`],['Stop-loss (जोखिम %)',s=>`${f(s.stop)} (${f(s.risk,1)})`],
+   ['Volume ×',s=>f(s.volR,2)],['CMF 5 दिन',s=>f(fl[s.sym]?.cmf5,2)],['5 दिने प्रवाह',s=>fl[s.sym]?.ad==='acc'?'<span class="p">Accumulation</span>':fl[s.sym]?.ad==='dist'?'<span class="n">Distribution</span>':'–'],
+   ['ब्रोकर एकाग्रता 5 दिन %',s=>f(fl[s.sym]?.bconc,0)],
+   ['EPS (वार्षिक)',s=>{const r=fundRow(s.sym,s.c);return r?f(r.eps,2):'–'}],['P/E',s=>{const r=fundRow(s.sym,s.c);return r?(r.loss?'घाटा':f(r.pe,1)):'–'}],['P/B',s=>{const r=fundRow(s.sym,s.c);return r?f(r.pb,2):'–'}],
+   ['ROE %',s=>{const r=fundRow(s.sym,s.c);return r?f(r.roe,1):'–'}],['NPL %',s=>{const r=fundRow(s.sym,s.c);return r?f(r.npl,2):'–'}]];
+  $('#cmpTbl').innerHTML=`<thead><tr><th class="l"></th>${st.map((s,i)=>`<th style="color:${PAL[i]}">${s.sym}</th>`).join('')}</tr></thead><tbody>${rowsDef.map(([n,fn])=>`<tr style="cursor:default"><td class="l">${n}</td>${st.map(s=>`<td>${fn(s)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+// ---------- ब्रोकर ----------
+let brkSort='na',brkDir=-1;
+const PERN={today:'आज',thisWeek:'यो हप्ता',lastWeek:'अघिल्लो हप्ता',last5:'पछिल्ला 5 दिन'};
+function buildBrokerTable(){
+  if(!BR){$('#brkNote').textContent='ब्रोकर डाटा छैन।';return}
+  const p=$('#brkPer').value,q=$('#brkQ').value.trim();const dts=BR.dates[p]||[];
+  $('#brkNote').textContent=dts.length?`${dts.length} दिनको floorsheet: ${dts[0]}${dts.length>1?' – '+dts.at(-1):''}`:'यो अवधिको floorsheet अझै जम्मा भएको छैन (floorsheet 2026-11-26 देखि मात्र छ)।';
+  const cols=[['id','ब्रोकर'],['bq','खरिद कित्ता'],['ba','खरिद रु. लाख'],['sq','बिक्री कित्ता'],['sa','बिक्री रु. लाख'],['nq','Net कित्ता'],['na','Net रु. लाख'],['t','कारोबार']];
+  $('#brkTbl thead').innerHTML='<tr>'+cols.map(([k,n],i)=>`<th data-k="${k}" class="${i?'':'l'}">${n}</th>`).join('')+'</tr>';
+  $('#brkTbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(brkSort===k)brkDir*=-1;else{brkSort=k;brkDir=-1}buildBrokerTable()};
+  const rs=BR.brokers.filter(b=>b[p]&&(!q||b.id===q)).sort((a,b)=>brkSort==='id'?(+a.id-+b.id)*brkDir*-1:((a[p][brkSort]>b[p][brkSort])?1:-1)*brkDir);
+  $('#brkTbl tbody').innerHTML=rs.map(b=>{const x=b[p];return `<tr data-b="${b.id}"><td><b>#${b.id}</b></td><td>${num(x.bq)}</td><td>${lakh(x.ba)}</td><td>${num(x.sq)}</td><td>${lakh(x.sa)}</td><td class="${cls(x.nq)}">${num(x.nq)}</td><td class="${cls(x.na)}"><b>${lakh(x.na)}</b></td><td>${num(x.t)}</td></tr>`}).join('');
+  $('#brkTbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)brokerDetail(tr.dataset.b)};
+}
+function brokerDetail(id){
+  const b=BR.brokers.find(x=>x.id===id);if(!b)return;
+  const per=PER_LIST.filter(p=>b[p]);
+  const tb=(arr,c)=>arr.length?arr.map(([s,nq,na])=>`<tr data-s="${s}"><td>${symLink(s)} <span class="note">${secShort(secOf(s))}</span></td><td class="${c}">${num(nq)}</td><td class="${c}">${lakh(na)}</td></tr>`).join(''):'<tr><td class="note">–</td></tr>';
+  $('#brkDetail').innerHTML=`<div class="card"><h3 style="margin-top:0">ब्रोकर #${id}</h3>
+   <div class="tw"><table><thead><tr><th class="l">अवधि</th><th>खरिद रु. लाख</th><th>बिक्री रु. लाख</th><th>Net रु. लाख</th><th>Net कित्ता</th></tr></thead><tbody>${per.map(p=>`<tr style="cursor:default"><td class="l">${PERN[p]}</td><td>${lakh(b[p].ba)}</td><td>${lakh(b[p].sa)}</td><td class="${cls(b[p].na)}"><b>${lakh(b[p].na)}</b></td><td class="${cls(b[p].nq)}">${num(b[p].nq)}</td></tr>`).join('')}</tbody></table></div>
+   ${per.map(p=>`<h4>${PERN[p]}</h4><div class="two"><div><b class="p">बढी Net खरिद</b><table><thead><tr><th class="l">सिम्बोल</th><th>कित्ता</th><th>रु. लाख</th></tr></thead><tbody>${tb(b[p].topBuy,'p')}</tbody></table></div><div><b class="n">बढी Net बिक्री</b><table><thead><tr><th class="l">सिम्बोल</th><th>कित्ता</th><th>रु. लाख</th></tr></thead><tbody>${tb(b[p].topSell,'n')}</tbody></table></div></div>`).join('')}</div>`;
+  $('#brkDetail').scrollIntoView({behavior:'smooth'});
+}
+const PER_LIST=['today','thisWeek','lastWeek','last5'];
+
+// ---------- Push / Pull, Accumulation ----------
+function brokerNote(sym,p,side){const x=BR?.stocks?.[sym]?.[p];if(!x)return '–';const arr=side==='buy'?x.netBuyers:x.netSellers;return arr.slice(0,3).map(([id,nq])=>`#${id} ${num(Math.abs(nq))}`).join(', ')}
+function buildFlows(){
+  if(!M?.flows){$('#pullTbl').innerHTML='<tr><td class="note">डाटा छैन</td></tr>';return}
+  const F=M.flows;
+  const ppRow=x=>`<tr data-s="${x.sym}"><td>${symLink(x.sym)}</td><td class="l note">${secShort(x.sector)}</td><td>${f(x.c)}</td><td class="${cls(x.chg)}">${sg(x.chg,2)}</td><td>${f(x.loc*100,0)}</td><td>${f(x.volR,2)}</td><td>${sg(x.sc,0)}</td><td class="l note">${brokerNote(x.sym,'today','buy')}</td><td class="l note">${brokerNote(x.sym,'today','sell')}</td></tr>`;
+  const head=`<thead><tr><th class="l">सिम्बोल</th><th class="l">क्षेत्र</th><th>LTP</th><th>आज %</th><th>Close स्थान %</th><th>Volume ×</th><th>अङ्क</th><th class="l">शीर्ष Net खरिद ब्रोकर</th><th class="l">शीर्ष Net बिक्री ब्रोकर</th></tr></thead>`;
+  const pull=F.filter(x=>x.pp==='pull').sort((a,b)=>b.chg*b.volR-a.chg*a.volR),push=F.filter(x=>x.pp==='push').sort((a,b)=>a.chg*a.volR-b.chg*b.volR);
+  $('#pullTbl').innerHTML=head+'<tbody>'+(pull.map(ppRow).join('')||'<tr><td class="note" colspan="9">आज कुनै शेयर यो सर्तमा परेन।</td></tr>')+'</tbody>';
+  $('#pushTbl').innerHTML=head+'<tbody>'+(push.map(ppRow).join('')||'<tr><td class="note" colspan="9">आज कुनै शेयर यो सर्तमा परेन।</td></tr>')+'</tbody>';
+  const bd=F.find(x=>x.bdays)?.bdays||0;
+  $('#accNote').innerHTML=`<b>कसरी छानिन्छ:</b> पछिल्ला 5 कारोबार दिनमा Chaikin Money Flow (CMF) ≥ +0.25 (accumulation) वा ≤ −0.25 (distribution), बढ्ने दिनको volume हिस्सा ≥65% वा ≤35%, औसत volume 20 दिने औसत बराबर वा बढी, र दैनिक कारोबार रु. 2 लाख+। "ब्रोकर एकाग्रता" = पछिल्ला ${bd} दिनको floorsheet मा शीर्ष 5 net खरिदकर्ताको net बाट शीर्ष 5 net बिक्रेताको net घटाएर, कुल कारोबारको %। Floorsheet 2026-11-26 देखि मात्र जम्मा भइरहेकाले हप्ता पुगेपछि यो बढी भरपर्दो हुन्छ।`;
+  const aRow=x=>`<tr data-s="${x.sym}"><td>${symLink(x.sym)}</td><td class="l note">${secShort(x.sector)}</td><td>${f(x.c)}</td><td class="${cls(x.r5)}">${sg(x.r5,1)}</td><td class="${cls(x.cmf5)}">${f(x.cmf5,2)}</td><td>${f(x.upRatio*100,0)}</td><td>${f(x.vol5R,2)}</td><td class="${cls(x.bconc)}">${x.bconc==null?'–':sg(x.bconc,0)}</td><td>${sg(x.sc,0)}</td><td class="l"><span class="sig s-${x.sig}">${SIG[x.sig]}</span></td><td class="l note">${brokerNote(x.sym,'last5','buy')}</td></tr>`;
+  const ah=`<thead><tr><th class="l">सिम्बोल</th><th class="l">क्षेत्र</th><th>LTP</th><th>5 दिन %</th><th>CMF 5</th><th>बढ्ने दिन volume %</th><th>Volume 5/20</th><th>ब्रोकर एकाग्रता %</th><th>अङ्क</th><th class="l">सङ्केत</th><th class="l">शीर्ष Net खरिद ब्रोकर (5 दिन)</th></tr></thead>`;
+  $('#accTbl').innerHTML=ah+'<tbody>'+(F.filter(x=>x.ad==='acc').sort((a,b)=>b.cmf5-a.cmf5).map(aRow).join('')||'<tr><td class="note">छैन</td></tr>')+'</tbody>';
+  $('#distTbl').innerHTML=ah+'<tbody>'+(F.filter(x=>x.ad==='dist').sort((a,b)=>a.cmf5-b.cmf5).map(aRow).join('')||'<tr><td class="note">छैन</td></tr>')+'</tbody>';
+  document.querySelectorAll('#pullTbl tr[data-s],#pushTbl tr[data-s],#accTbl tr[data-s],#distTbl tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
+}
+
+// ---------- शेयर विवरणमा थप ----------
+function extraDetail(s){
+  let out='';const r=fundRow(s.sym,s.c);
+  if(r){out+=`<div class="card"><b>आधारभूत विश्लेषण</b> <span class="note">${r.F.period} · स्रोत: ${r.F.source.replace('claude/','')}</span><div class="grid" style="margin-top:8px">
+    <div class="kv"><span>EPS (वार्षिक, Q1 बाट)</span><b>${r.F.eps_q1a===''?'–':(+r.F.eps_q1a<0?'<span class="n">घाटा</span>':f(+r.F.eps_q1a,2))}</b></div>
+    <div class="kv"><span>EPS (गत वर्ष)</span><b>${r.F.eps_ly===''?'–':(+r.F.eps_ly<0?'<span class="n">घाटा</span>':f(+r.F.eps_ly,2))}</b></div>
+    <div class="kv"><span>P/E (आजको मूल्यमा)</span><b>${r.loss?'<span class="n">घाटा</span>':f(r.pe,1)}</b>${r.peLy?` <span class="note">(गत वर्षको EPS मा ${f(r.peLy,1)})</span>`:''}</div>
+    <div class="kv"><span>Book value / शेयर</span><b>${f(r.bvps,1)}</b></div><div class="kv"><span>P/B (आजको मूल्यमा)</span><b>${f(r.pb,2)}</b></div>
+    <div class="kv"><span>ROE</span><b>${r.roe==null?'–':f(r.roe,1)+'%'}</b></div><div class="kv"><span>NPL</span><b>${r.npl==null?'–':f(r.npl,2)+'%'}</b></div><div class="kv"><span>CAR</span><b>${r.car==null?'–':f(r.car,2)+'%'}</b></div>
+   </div>${r.F.note?`<p class="note">${r.F.note}</p>`:''}</div>`}
+  else out+=`<div class="card note">यो कम्पनीको आधारभूत तथ्याङ्क (EPS, P/E, book value) अझै डाटामा छैन।</div>`;
+  const sec=secOf(s.sym);
+  if(sec){const peers=D.stocks.filter(x=>secOf(x.sym)===sec).sort((a,b)=>b.sc-a.sc).slice(0,12);
+    out+=`<div class="card"><b>${secShort(sec)} क्षेत्रका समकक्षी</b><div class="tw"><table><thead><tr><th class="l">सिम्बोल</th><th>LTP</th><th>20 दिन %</th><th>RSI</th><th>अङ्क</th><th>P/E</th><th>P/B</th><th>ROE %</th></tr></thead><tbody>${peers.map(x=>{const q=fundRow(x.sym,x.c);return `<tr data-s="${x.sym}" style="${x.sym===s.sym?'background:var(--chip)':''}"><td>${symLink(x.sym)}</td><td>${f(x.c)}</td><td class="${cls(x.m.r20)}">${sg(x.m.r20,1)}</td><td>${f(x.rsi,0)}</td><td>${sg(x.sc,0)}</td><td>${q?(q.loss?'घाटा':f(q.pe,1)):'–'}</td><td>${q?f(q.pb,2):'–'}</td><td>${q?f(q.roe,1):'–'}</td></tr>`}).join('')}</tbody></table></div></div>`}
+  const sb=BR?.stocks?.[s.sym];
+  if(sb){out+=`<div class="card"><b>ब्रोकर Net (कित्ता)</b><div class="two">${PER_LIST.filter(p=>sb[p]).map(p=>`<div><b class="note">${PERN[p]} · कुल ${num(sb[p].tot)} कित्ता · एकाग्रता ${sg(sb[p].conc,0)}%</b><table><tbody>${sb[p].netBuyers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="p">+${num(nq)}</td></tr>`).join('')}${sb[p].netSellers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="n">${num(nq)}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div></div>`}
+  const q=(M?.flows||[]).find(x=>x.sym===s.sym);
+  if(q)out+=`<div class="card"><b>पैसाको प्रवाह</b><div class="grid" style="margin-top:8px"><div class="kv"><span>CMF (5 दिन)</span><b class="${cls(q.cmf5)}">${f(q.cmf5,2)}</b></div><div class="kv"><span>बढ्ने दिनको volume %</span><b>${f(q.upRatio*100,0)}</b></div><div class="kv"><span>Volume 5 दिन / 20 दिन</span><b>${f(q.vol5R,2)}</b></div><div class="kv"><span>आज</span><b>${q.pp==='pull'?'<span class="p">खरिद Pull</span>':q.pp==='push'?'<span class="n">बिक्री Push</span>':'–'}</b></div><div class="kv"><span>5 दिने</span><b>${q.ad==='acc'?'<span class="p">Accumulation</span>':q.ad==='dist'?'<span class="n">Distribution</span>':'–'}</b></div></div></div>`;
+  return out;
+}
+</script>
+
 </body>
 </html>

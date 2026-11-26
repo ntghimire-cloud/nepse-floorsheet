@@ -59,10 +59,11 @@ jobs:
           mkdir -p docs/data
           REPORT_OUT=docs/data/latest.json node scripts/scan_daily.js ../nepse-data/data/company-wise data
           node scripts/backtest_components.js ../nepse-data/data/company-wise docs/data/backtest.json
+          node scripts/build_market.js data docs/data/latest.json docs/data
       - name: Encrypt dashboard data (password in repo secret DASH_PASSWORD)
         env:
           DASH_PASSWORD: ${{ secrets.DASH_PASSWORD }}
-        run: node scripts/encrypt_data.js docs/data/latest.json docs/data/backtest.json
+        run: node scripts/encrypt_data.js docs/data/latest.json docs/data/backtest.json docs/data/market.json docs/data/brokers.json
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with: { path: docs }
