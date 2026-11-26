@@ -11,7 +11,7 @@ Daily NEPSE floorsheet archive, prices and a scan dashboard, all updated by GitH
 - `research/` — walk-forward and circuit-model studies
 - Workflow `.github/workflows/floorsheet.yml` runs Sun–Fri at 16:15 Nepal time (or by hand: Actions → daily-floorsheet → Run workflow)
 
-One-time setup for the dashboard: Settings → Pages → Source: **GitHub Actions**.
+One-time setup for the dashboard: Settings → Pages → Source: **GitHub Actions**, and a repository secret **DASH_PASSWORD**. The dashboard data is published only encrypted (AES-256-GCM, key from PBKDF2-SHA256 of that password, `scripts/encrypt_data.js`); the page asks for the password. Without the secret no readable data is published.
 
 Price history: [Aabishkar2/nepse-data](https://github.com/Aabishkar2/nepse-data). Live data: [NepseUnofficialApi](https://github.com/basic-bgnr/NepseUnofficialApi).
 Rule-based technical screening only, not investment advice.

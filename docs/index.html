@@ -50,10 +50,16 @@ canvas{width:100%;display:block}
 .warn{border-left:3px solid var(--watch);padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:14px}
 .bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--acc)}
+#lock{max-width:380px;margin:60px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+#lock input[type=password]{width:100%;margin:10px 0}
+#lock button,.lockbtn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:inherit;cursor:pointer}
+.lockbtn{background:var(--card);color:var(--mute);border:1px solid var(--line);padding:4px 10px;font-size:12px;float:right}
+body.locked nav,body.locked main,body.locked #chips{display:none}
 </style>
 </head>
-<body>
+<body class="locked">
 <header>
+  <button class="lockbtn" id="relock" hidden>ताल्चा लगाउनुहोस् 🔒</button>
   <h1>NEPSE स्क्यान ड्यासबोर्ड</h1>
   <div class="sub" id="sub">लोड हुँदैछ…</div>
   <div class="chips" id="chips"></div>
@@ -92,6 +98,12 @@ canvas{width:100%;display:block}
     <div class="card" id="methodBox"></div>
   </section>
 </main>
+<div id="lock" hidden>
+  <h3 style="margin-top:0">🔒 पासवर्ड चाहिन्छ</h3>
+  <form id="lockForm"><input type="password" id="pw" placeholder="पासवर्ड" autocomplete="current-password">
+  <label class="note"><input type="checkbox" id="remember" checked> यो browser मा सम्झनुहोस्</label><br><br>
+  <button type="submit" id="unlockBtn">खोल्नुहोस्</button> <span class="note" id="lockMsg"></span></form>
+</div>
 <div id="detail"><div class="box" id="dbox"></div></div>
 <script>
 const SIG={buy:'किन्न योग्य',watch:'निगरानी',hold:'होल्ड',sell:'बिक्री/सावधान'};
@@ -117,7 +129,24 @@ const sg=(x,d=1)=>{if(x==null||!isFinite(x))return '–';const t=Number(x).toFix
 const cls=x=>x>0?'p':x<0?'n':'m';
 let D,B,rows=[],sortK='sc',sortDir=-1;
 
-Promise.all([fetch('data/latest.json',{cache:'no-cache'}).then(r=>r.json()),fetch('data/backtest.json',{cache:'no-cache'}).then(r=>r.json()).catch(()=>null)]).then(([d,b])=>{D=d;B=b;init()}).catch(e=>{$('#sub').textContent='डाटा लोड हुन सकेन: '+e});
+// ---- password lock: data is published only as AES-256-GCM (key = PBKDF2-SHA256 of the password); see scripts/encrypt_data.js
+const SALT='ntghimire-cloud/nepse-floorsheet:v1',ITER=310000,KS='nepseDashKey';
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode(SALT),iterations:ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},true,['decrypt'])}
+async function dec(key,url){const j=await (await fetch(url,{cache:'no-cache'})).json();const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.iv)},key,b64(j.ct));return JSON.parse(await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text())}
+async function openWith(key){const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
+function showLock(msg){$('#lock').hidden=false;$('#sub').textContent='';$('#lockMsg').textContent=msg||'';$('#pw').focus()}
+(async()=>{
+  let st={};try{st=await (await fetch('data/status.json',{cache:'no-cache'})).json()}catch(e){}
+  if(st.missingPassword){$('#sub').textContent='डाटा प्रकाशित गरिएको छैन: GitHub Secrets मा DASH_PASSWORD राखिएको छैन।';return}
+  const saved=localStorage.getItem(KS)||sessionStorage.getItem(KS);
+  if(saved){try{await openWith(await crypto.subtle.importKey('raw',b64(saved),'AES-GCM',true,['decrypt']));return}catch(e){localStorage.removeItem(KS);sessionStorage.removeItem(KS)}}
+  showLock();
+})();
+$('#lockForm').onsubmit=async e=>{e.preventDefault();$('#lockMsg').textContent='जाँच्दै…';$('#unlockBtn').disabled=true;
+  try{const key=await deriveKey($('#pw').value);await openWith(key);const raw=btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey('raw',key))));($('#remember').checked?localStorage:sessionStorage).setItem(KS,raw);$('#pw').value=''}
+  catch(err){$('#lockMsg').textContent='पासवर्ड मिलेन।'}finally{$('#unlockBtn').disabled=false}};
+$('#relock').onclick=()=>{localStorage.removeItem(KS);sessionStorage.removeItem(KS);location.hash='';location.reload()};
 
 function verdict(k,side){
   if(!B||!B.components[k])return {t:'–',c:'m'};
