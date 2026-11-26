@@ -55,7 +55,7 @@ jobs:
           REPORT_OUT=docs/data/latest.json node scripts/scan_daily.js ../nepse-data/data/company-wise data
           node scripts/backtest_components.js ../nepse-data/data/company-wise docs/data/backtest.json
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with: { path: docs }
       - id: deploy
         uses: actions/deploy-pages@v4
