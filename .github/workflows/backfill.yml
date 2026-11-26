@@ -1,0 +1,25 @@
+name: backfill-market
+# One-off / occasional: saves past days' full prices (with market cap) to data/prices_full/.
+on:
+  workflow_dispatch:
+    inputs:
+      days: { description: "calendar days back", default: "400" }
+permissions: { contents: write }
+concurrency: { group: daily-floorsheet, cancel-in-progress: false }
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install git+https://github.com/basic-bgnr/NepseUnofficialApi
+      - run: python scripts/backfill_market.py ${{ inputs.days }}
+      - run: |
+          git config user.name "floorsheet-bot"
+          git config user.email "floorsheet-bot@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet || git commit -m "backfill market data"
+          git pull --rebase
+          git push
