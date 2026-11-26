@@ -1,4 +1,5 @@
-// Daily NEPSE technical scan. Usage: node scripts/scan_daily.js <nepse-data/data/company-wise>
+// Daily NEPSE technical scan. Usage: node scripts/scan_daily.js <nepse-data/data/company-wise> [nepse-floorsheet/data]
+// With the 2nd arg, days missing from nepse-data are filled from data/prices (close, % change) + data/floorsheet (open/high/low/volume).
 const DEF = {emaS:20, maM:50, maL:200, rsiN:14, rsiLo:30, rsiHi:70, volMult:1.5, brkN:20, atrMult:2, minVol:2000, buyAt:7, sellAt:-3};
 
 function sma(a,n){const o=new Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];if(i>=n-1)o[i]=s/n}return o}
@@ -33,8 +34,7 @@ function analyze(sym,rows,cfg,mkt){
   } else { c>mM[i]?add(1,'मूल्य '+cfg.maM+' MA माथि ('+cfg.maL+' MA को डाटा पुगेन)'):add(-1,'मूल्य '+cfg.maM+' MA तल ('+cfg.maL+' MA को डाटा पुगेन)') }
   c>eS[i]?add(1,'मूल्य '+cfg.emaS+' EMA माथि'):add(-1,'मूल्य '+cfg.emaS+' EMA तल');
   eS[i]>eS[i-5]?add(1,cfg.emaS+' EMA उक्लँदै'):add(-1,cfg.emaS+' EMA ओर्लँदै');
-  M[i]>S[i]?add(1,'MACD सिग्नल लाइन माथि'):add(-1,'MACD सिग्नल लाइन तल');
-  for(let k=i;k>i-3;k--){if(M[k]>S[k]&&M[k-1]<=S[k-1]){add(1,'हालै MACD bullish crossover');break}if(M[k]<S[k]&&M[k-1]>=S[k-1]){add(-1,'हालै MACD bearish crossover');break}}
+  // MACD हटाइयो (2026-11-26 walk-forward: NEPSE मा bullish crossover पछि बजारभन्दा कमजोर, train र test दुवैमा)
   const r=R[i];
   if(r>cfg.rsiHi)add(-1,'RSI '+r.toFixed(0)+' — overbought, नयाँ खरिदमा जोखिम');
   else if(r>=50)add(1,'RSI '+r.toFixed(0)+' — सकारात्मक गति');
@@ -45,7 +45,8 @@ function analyze(sym,rows,cfg,mkt){
   if(c<=minOf(C,i-lb,p)&&r>rMin+5)add(1,'Bullish divergence: मूल्य नयाँ न्यूनमा, RSI माथि');
   const res=maxOf(H,i-cfg.brkN,p),sup=minOf(L,i-cfg.brkN,p);
   let brk=false;
-  if(c>res){if(volR==null||volR>=cfg.volMult){add(2,cfg.brkN+' दिने resistance '+res.toFixed(1)+' volume सहित तोड्यो');brk=true}else add(0,'resistance तोड्यो तर volume कम — पुष्टि बाँकी')}
+  // 20 दिने breakout को अङ्क हटाइयो (walk-forward: volume breakout पछि बजारभन्दा कमजोर); जानकारीका लागि मात्र देखाइन्छ
+  if(c>res){add(0,cfg.brkN+' दिने resistance '+res.toFixed(1)+' तोड्यो (अङ्क छैन)');brk=true}
   if(c<sup)add(-2,cfg.brkN+' दिने support '+sup.toFixed(1)+' तल झर्यो');
   if(volR!=null){
     if(!brk&&chg>0&&volR>=cfg.volMult)add(1,'मूल्य बढ्दा volume '+volR.toFixed(1)+'× औसत');
@@ -65,11 +66,26 @@ function analyze(sym,rows,cfg,mkt){
 const fs=require('fs'),path=require('path');
 const dir=process.argv[2]||'nepse-data/data/company-wise';
 const groups={};let latest='';
+const extra={};
+if(process.argv[3]){
+  const zlib=require('zlib');const base=process.argv[3];
+  const rd=f=>{const L=zlib.gunzipSync(fs.readFileSync(f)).toString().trim().split(/\r?\n/);const H=L[0].split(',');return L.slice(1).map(l=>{const p=l.split(',');const o={};H.forEach((k,j)=>o[k]=p[j]);return o})};
+  const pdir=path.join(base,'prices');
+  const dates=fs.existsSync(pdir)?fs.readdirSync(pdir).filter(x=>x.endsWith('.csv.gz')).map(x=>x.slice(0,10)).sort().slice(-10):[];
+  for(const ds of dates){
+    const ff=path.join(base,'floorsheet',ds+'.csv.gz');if(!fs.existsSync(ff))continue;
+    const fs_={};
+    for(const t of rd(ff).sort((a,b)=>a.tradeTime<b.tradeTime?-1:1)){const q=+t.contractQuantity,r=+t.contractRate;if(!(r>0))continue;const a=fs_[t.stockSymbol]??={o:r,h:r,l:r,v:0};a.h=Math.max(a.h,r);a.l=Math.min(a.l,r);a.v+=q}
+    for(const pr of rd(path.join(pdir,ds+'.csv.gz'))){const c=+(pr.closePrice||pr.lastTradedPrice);const a=fs_[pr.symbol];if(!(c>0)||!a)continue;
+      (extra[pr.symbol]??=[]).push({ds,o:a.o,h:Math.max(a.h,c),l:Math.min(a.l,c),c,v:a.v,pc:parseFloat(pr.percentageChange)})}
+  }
+}
 for(const f of fs.readdirSync(dir).filter(x=>x.endsWith('.csv'))){
   const sym=f.slice(0,-4);
   if(/(BD|D)\d{2,}$/.test(sym)||/D\d{4}/.test(sym))continue;
   const L=fs.readFileSync(path.join(dir,f),'utf8').trim().split(/\r?\n/);const H=L[0].split(',');const ix=k=>H.indexOf(k);
   let rows=[];for(const l of L.slice(1)){const p=l.split(',');const r={ds:p[ix('published_date')],o:+p[ix('open')],h:+p[ix('high')],l:+p[ix('low')],c:+p[ix('close')],v:+p[ix('traded_quantity')]||0,pc:parseFloat(p[ix('per_change')])};if(r.c>0)rows.push(r)}
+  if(extra[sym]){const last=rows.length?rows[rows.length-1].ds:'';for(const e of extra[sym])if(e.ds>last)rows.push(e)}
   if(rows.length<60)continue;
   let f_=1;const fac=new Array(rows.length).fill(1);
   for(let i=rows.length-1;i>0;i--){fac[i]=f_;const pc=rows[i].pc;if(!isFinite(pc)||pc<=-100)continue;const prev=rows[i-1].c;

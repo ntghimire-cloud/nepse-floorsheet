@@ -1,6 +1,6 @@
 """Fetch today's NEPSE price/volume for all securities and save as data/prices/YYYY-MM-DD.csv.gz.
 Raw fields are kept as returned by NepseUnofficialApi; scan_daily.js maps them.
-Skips (exit 0) when the data is not for today (holiday / market closed)."""
+Runs after fetch_floorsheet.py; skips (exit 0) unless today's floorsheet exists (holiday / market closed)."""
 import csv, gzip, os, sys, time, datetime as dt
 from nepse import Nepse
 
@@ -22,8 +22,8 @@ stamp = next((str(r.get(k)) for r in rows for k in ("businessDate", "lastUpdated
 date = stamp[:10] if stamp[:4].isdigit() else today
 print("sample keys:", sorted(rows[0].keys()))
 print("sample row:", rows[0])
-if date != today:
-    print(f"price data date {date} != today {today}; skipping"); sys.exit(0)
+if date != today or not os.path.exists(f"data/floorsheet/{today}.csv.gz"):
+    print(f"no trading today ({today}) per floorsheet; skipping prices"); sys.exit(0)
 
 keys = sorted({k for r in rows for k in r.keys()})
 os.makedirs("data/prices", exist_ok=True)
