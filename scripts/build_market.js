@@ -211,7 +211,7 @@ const fund = fs.existsSync(fpath) ? Object.fromEntries(csv(fs.readFileSync(fpath
 
 const market = { date: today, generated: new Date().toISOString(), priceDays: days.length, priceFrom: days[0]?.date || null,
   official, officialHist, capIndex: mktSeries.slice(-250), breadthHist, market: mkt, sectors: secRows, sectorOf, nameOf,
-  flows, fundamentals: fund, div };
+  flows, fundamentals: fund, div, caps: T ? Object.fromEntries(Object.entries(T.rows).map(([k, r]) => [k, Math.round(r.cap)])) : {} };
 const brokersOut = { date: lastF, dates: usedDates, thisWeekStart: thisW, lastWeekStart: prevW, brokers, stocks: stockBrokers };
 fs.writeFileSync(path.join(OUT, 'market.json'), JSON.stringify(market));
 fs.writeFileSync(path.join(OUT, 'brokers.json'), JSON.stringify(brokersOut));

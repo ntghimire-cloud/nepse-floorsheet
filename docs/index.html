@@ -362,7 +362,7 @@ function openD(sym){
   <div class="sub">${s.date} · LTP <b>${f(s.c)}</b> <span class="${cls(s.chg)}">${sg(s.chg,2)}%</span></div>
   ${ai.length?`<div class="warn" style="margin-top:10px">${ai.join(' ')}</div>`:''}
   <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span><span><i style="background:#e64980"></i>AVWAP (52 हप्ते न्यूनबाट)</span><span><i style="background:#868e96"></i>POC / VAH / VAL (60 दिन)</span></div><canvas id="cv" height="300"></canvas></div>
-  ${RV?.stocks?.[s.sym]?rvHtml(RV.stocks[s.sym].tech,'प्राविधिक समीक्षा ('+RV.date+')',RV.stocks[s.sym].tech.stTxt,RV.stocks[s.sym].tech.stance)+rvHtml(RV.stocks[s.sym].fund,'आधारभूत समीक्षा'):''}
+  ${RV?.stocks?.[s.sym]?rvHtml(RV.stocks[s.sym].tech,'प्राविधिक समीक्षा — Murphy का दस नियम ('+RV.date+')',RV.stocks[s.sym].tech.stTxt,RV.stocks[s.sym].tech.stance)+rvHtml(RV.stocks[s.sym].fund,'आधारभूत समीक्षा — Graham (The Intelligent Investor)',RV.stocks[s.sym].fund.verdict,/^Defensive/.test(RV.stocks[s.sym].fund.verdict||'')?'positive':/आंशिक/.test(RV.stocks[s.sym].fund.verdict||'')?'mildpos':/सुरक्षाको सीमा छ/.test(RV.stocks[s.sym].fund.verdict||'')?'neutral':RV.stocks[s.sym].fund.verdict?'weak':'neutral'):''}
   <div class="two"><div class="card"><b>अङ्क इतिहास (60 दिन)</b><canvas id="cv2" height="140"></canvas></div>
   <div class="card"><b>मुख्य मान</b><div class="grid" style="margin-top:8px">
    ${kv('20 EMA',f(m.ema20)+pct(s.c,m.ema20))}${kv('50 MA',f(m.ma50)+pct(s.c,m.ma50))}${kv('200 MA',f(m.ma200)+pct(s.c,m.ma200))}
@@ -499,7 +499,7 @@ function buildMarket(){
     document.querySelectorAll('#tGain tr[data-s],#tLose tr[data-s],#tTurn tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
   }
   lineChart($('#cvBreadth'),[{data:M.breadthHist||[],color:css('--acc')}],{base:50,fmt:v=>v.toFixed(0)+'%'});
-  if(RV){$('#mktReview').innerHTML=rvHtml(RV.market,`बजार समीक्षा (${RV.date})`,RV.market.stance,STNP[RV.market.stance]);
+  if(RV){$('#mktReview').innerHTML=rvHtml(RV.market,`बजार समीक्षा — Murphy का नियम (${RV.date})`,RV.market.stance,STNP[RV.market.stance]);
     const TN={quarterly:'प्रतिवेदन',dividend:'लाभांश/बोनस',right:'हकप्रद',agm:'साधारण सभा',bookclose:'बुक क्लोज',auction:'लिलाम',merger:'गाभ्ने',ipo:'IPO/ऋणपत्र',other:'अन्य'};
     $('#tNews').innerHTML=(RV.news||[]).slice(0,40).map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.date}</td><td class="l">${n.symbol?symLink(n.symbol):'<span class="note">–</span>'}</td><td class="l note">${TN[n.type]||n.type}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')||'<tr><td class="note">–</td></tr>'}
 }
@@ -538,7 +538,7 @@ function secDetail(sec){
   const x=M.sectors.find(s=>s.sector===sec);if(!x)return;
   const peers=D.stocks.filter(s=>secOf(s.sym)===sec).sort((a,b)=>b.sc-a.sc);
   const fl=Object.fromEntries((M.flows||[]).map(f=>[f.sym,f]));
-  $('#secDetail').innerHTML=(RV?.sectors?.[sec]?rvHtml(RV.sectors[sec],secShort(sec)+' क्षेत्रको समीक्षा'):'')+`<div class="card"><h3 style="margin-top:0">${secShort(sec)} <span class="note">${sec}</span></h3>
+  $('#secDetail').innerHTML=(RV?.sectors?.[sec]?rvHtml(RV.sectors[sec],secShort(sec)+' क्षेत्रको समीक्षा (Murphy + Graham)'):'')+`<div class="card"><h3 style="margin-top:0">${secShort(sec)} <span class="note">${sec}</span></h3>
    <canvas id="cvSecIdx" height="200"></canvas>
    <p class="note">बढी बढ्ने: ${x.top.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')} · बढी घट्ने: ${x.bottom.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')}</p>
    <b>समकक्षी तुलना</b><div class="tw"><table><thead><tr><th class="l">सिम्बोल</th><th>LTP</th><th>आज %</th><th>20 दिन %</th><th>60 दिन %</th><th>RSI</th><th>अङ्क</th><th class="l">सङ्केत</th><th>P/E</th><th>P/B</th><th>ROE %</th><th>NPL %</th><th>CMF 5</th><th class="l">5 दिन</th></tr></thead><tbody>
@@ -617,7 +617,7 @@ function buildFlows(){
 // ---------- लिखित समीक्षा ----------
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function rvHtml(o,title,stance,cls_){if(!o)return '';return `<div class="card rv"><b>${title}</b>${stance?`<span class="stance st-${cls_||'neutral'}">${stance}</span>`:''}${o.staleNote?`<div class="warn" style="margin-top:8px">${esc(o.staleNote)}</div>`:''}
-  ${o.paras.map(p=>`<h4>${esc(p.h)}</h4>${p.t?`<p>${esc(p.t)}</p>`:''}${p.list?`<table>${p.list.map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.d}</td><td class="l note" style="width:120px">${esc(n.t)}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')}</table>`:''}`).join('')}
+  ${o.paras.map(p=>`<h4>${esc(p.h)}</h4>${p.checks?`<table style="margin-bottom:6px">${p.checks.map(c=>`<tr style="cursor:default"><td style="width:28px;text-align:center" class="${c.ok===true?'p':c.ok===false?'n':'m'}"><b>${c.ok===true?'✔':c.ok===false?'✘':'?'}</b></td><td class="l" style="white-space:normal">${esc(c.k)}</td><td class="l note" style="white-space:normal">${esc(c.v)}</td></tr>`).join('')}</table>`:''}${p.t?`<p>${esc(p.t)}</p>`:''}${p.list?`<table>${p.list.map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.d}</td><td class="l note" style="width:120px">${esc(n.t)}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')}</table>`:''}`).join('')}
   ${o.disc?`<p class="note" style="margin-top:8px">${esc(o.disc)}</p>`:''}</div>`}
 const STNP={'सकारात्मक':'positive','सतर्क सकारात्मक':'mildpos','तटस्थ':'neutral','मिश्रित':'neutral','कमजोर':'weak','नकारात्मक':'negative'};
 // ---------- शेयर विवरणमा थप ----------
