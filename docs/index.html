@@ -51,6 +51,8 @@ canvas{width:100%;display:block}
 .warn{border-left:3px solid var(--watch);padding:8px 12px;background:var(--card);border-radius:6px;margin-bottom:14px}
 .bar{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--acc)}
+.rv h4{margin:12px 0 4px;font-size:14px}.rv p{margin:0 0 6px;line-height:1.7}.rv .stance{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:600;color:#fff;margin-left:6px;font-size:12px}
+.st-positive{background:var(--buy)}.st-mildpos{background:#2b8a3e99}.st-neutral{background:var(--hold)}.st-weak{background:var(--watch)}.st-negative{background:var(--sell)}
 #lock{max-width:380px;margin:60px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
 #lock input[type=password]{width:100%;margin:10px 0}
 #lock button,.lockbtn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:inherit;cursor:pointer}
@@ -121,6 +123,7 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
   </section>
   <section id="t-mkt">
     <div class="grid" id="idxCards" style="margin-bottom:14px"></div>
+    <div id="mktReview"></div>
     <div class="card"><b>बजार सूचक (market cap भारित, आफैं गणना गरिएको)</b> <span class="note" id="capNote"></span>
       <div class="legend"><span><i style="background:var(--acc)"></i>सबै कम्पनी (cap-weighted)</span><span><i style="background:var(--watch)"></i>NEPSE आधिकारिक (जम्मा भएका दिन)</span></div><canvas id="cvMkt" height="240"></canvas></div>
     <div class="two">
@@ -130,6 +133,7 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
     <div class="card" id="mktSummary"></div>
     <div class="two"><div class="card"><b>आजका बढी बढ्ने</b><table id="tGain"></table></div><div class="card"><b>आजका बढी घट्ने</b><table id="tLose"></table></div></div>
     <div class="card"><b>सबैभन्दा बढी कारोबार</b><table id="tTurn"></table></div>
+    <div class="card"><b>हालका कम्पनी सूचना</b> <span class="note">स्रोत: Merolagani, हरेक दिन अद्यावधिक</span><div class="tw"><table id="tNews"></table></div></div>
   </section>
   <section id="t-sec" hidden>
     <div class="card"><b>क्षेत्रगत अवस्था</b> <span class="note">प्रतिफल = क्षेत्रभित्रका कम्पनीको market cap भारित सूचक। कारोबार 5/20 &gt; 1 भए हालै पैसा बढी आइरहेको।</span>
@@ -225,7 +229,7 @@ const $=s=>document.querySelector(s);
 const f=(x,d=1)=>x==null||!isFinite(x)?'–':Number(x).toFixed(d);
 const sg=(x,d=1)=>{if(x==null||!isFinite(x))return '–';const t=Number(x).toFixed(d);return /^-0(\.0+)?$/.test(t)?t.slice(1):(x>0?'+':'')+t};
 const cls=x=>x>0?'p':x<0?'n':'m';
-let D,B,M=null,BR=null,rows=[],sortK='sc',sortDir=-1;
+let D,B,M=null,BR=null,RV=null,rows=[],sortK='sc',sortDir=-1;
 
 // ---- password lock: data is published only as AES-256-GCM (key = PBKDF2-SHA256 of the password); see scripts/encrypt_data.js
 const SALT='ntghimire-cloud/nepse-floorsheet:v1',ITER=310000,KS='nepseDashKey';
@@ -233,7 +237,7 @@ const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function deriveKey(pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode(SALT),iterations:ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},true,['encrypt','decrypt'])}
 async function dec(key,url){const j=await (await fetch(url,{cache:'no-cache'})).json();const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.iv)},key,b64(j.ct));return JSON.parse(await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text())}
 let DKEY=null;
-async function openWith(key){DKEY=key;const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}try{M=await dec(key,'data/market.enc')}catch(e){M=null}try{BR=await dec(key,'data/brokers.enc')}catch(e){BR=null}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
+async function openWith(key){DKEY=key;const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}try{M=await dec(key,'data/market.enc')}catch(e){M=null}try{BR=await dec(key,'data/brokers.enc')}catch(e){BR=null}try{RV=await dec(key,'data/reviews.enc')}catch(e){RV=null}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
 function showLock(msg){$('#lock').hidden=false;$('#sub').textContent='';$('#lockMsg').textContent=msg||'';$('#pw').focus()}
 (async()=>{
   let st={};try{st=await (await fetch('data/status.json',{cache:'no-cache'})).json()}catch(e){}
@@ -349,6 +353,7 @@ function openD(sym){
   <div class="sub">${s.date} · LTP <b>${f(s.c)}</b> <span class="${cls(s.chg)}">${sg(s.chg,2)}%</span></div>
   ${ai.length?`<div class="warn" style="margin-top:10px">${ai.join(' ')}</div>`:''}
   <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span><span><i style="background:#e64980"></i>AVWAP (52 हप्ते न्यूनबाट)</span><span><i style="background:#868e96"></i>POC / VAH / VAL (60 दिन)</span></div><canvas id="cv" height="300"></canvas></div>
+  ${RV?.stocks?.[s.sym]?rvHtml(RV.stocks[s.sym].tech,'प्राविधिक समीक्षा ('+RV.date+')',RV.stocks[s.sym].tech.stTxt,RV.stocks[s.sym].tech.stance)+rvHtml(RV.stocks[s.sym].fund,'आधारभूत समीक्षा'):''}
   <div class="two"><div class="card"><b>अङ्क इतिहास (60 दिन)</b><canvas id="cv2" height="140"></canvas></div>
   <div class="card"><b>मुख्य मान</b><div class="grid" style="margin-top:8px">
    ${kv('20 EMA',f(m.ema20)+pct(s.c,m.ema20))}${kv('50 MA',f(m.ma50)+pct(s.c,m.ma50))}${kv('200 MA',f(m.ma200)+pct(s.c,m.ma200))}
@@ -484,6 +489,9 @@ function buildMarket(){
     document.querySelectorAll('#tGain tr[data-s],#tLose tr[data-s],#tTurn tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
   }
   lineChart($('#cvBreadth'),[{data:M.breadthHist||[],color:css('--acc')}],{base:50,fmt:v=>v.toFixed(0)+'%'});
+  if(RV){$('#mktReview').innerHTML=rvHtml(RV.market,`बजार समीक्षा (${RV.date})`,RV.market.stance,STNP[RV.market.stance]);
+    const TN={quarterly:'प्रतिवेदन',dividend:'लाभांश/बोनस',right:'हकप्रद',agm:'साधारण सभा',bookclose:'बुक क्लोज',auction:'लिलाम',merger:'गाभ्ने',ipo:'IPO/ऋणपत्र',other:'अन्य'};
+    $('#tNews').innerHTML=(RV.news||[]).slice(0,40).map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.date}</td><td class="l">${n.symbol?symLink(n.symbol):'<span class="note">–</span>'}</td><td class="l note">${TN[n.type]||n.type}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')||'<tr><td class="note">–</td></tr>'}
 }
 
 // ---------- क्षेत्र ----------
@@ -520,7 +528,7 @@ function secDetail(sec){
   const x=M.sectors.find(s=>s.sector===sec);if(!x)return;
   const peers=D.stocks.filter(s=>secOf(s.sym)===sec).sort((a,b)=>b.sc-a.sc);
   const fl=Object.fromEntries((M.flows||[]).map(f=>[f.sym,f]));
-  $('#secDetail').innerHTML=`<div class="card"><h3 style="margin-top:0">${secShort(sec)} <span class="note">${sec}</span></h3>
+  $('#secDetail').innerHTML=(RV?.sectors?.[sec]?rvHtml(RV.sectors[sec],secShort(sec)+' क्षेत्रको समीक्षा'):'')+`<div class="card"><h3 style="margin-top:0">${secShort(sec)} <span class="note">${sec}</span></h3>
    <canvas id="cvSecIdx" height="200"></canvas>
    <p class="note">बढी बढ्ने: ${x.top.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')} · बढी घट्ने: ${x.bottom.map(([s,c])=>`${symLink(s)} ${sg(c,1)}%`).join(', ')}</p>
    <b>समकक्षी तुलना</b><div class="tw"><table><thead><tr><th class="l">सिम्बोल</th><th>LTP</th><th>आज %</th><th>20 दिन %</th><th>60 दिन %</th><th>RSI</th><th>अङ्क</th><th class="l">सङ्केत</th><th>P/E</th><th>P/B</th><th>ROE %</th><th>NPL %</th><th>CMF 5</th><th class="l">5 दिन</th></tr></thead><tbody>
@@ -592,6 +600,12 @@ function buildFlows(){
   document.querySelectorAll('#pullTbl tr[data-s],#pushTbl tr[data-s],#accTbl tr[data-s],#distTbl tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
 }
 
+// ---------- लिखित समीक्षा ----------
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function rvHtml(o,title,stance,cls_){if(!o)return '';return `<div class="card rv"><b>${title}</b>${stance?`<span class="stance st-${cls_||'neutral'}">${stance}</span>`:''}${o.staleNote?`<div class="warn" style="margin-top:8px">${esc(o.staleNote)}</div>`:''}
+  ${o.paras.map(p=>`<h4>${esc(p.h)}</h4>${p.t?`<p>${esc(p.t)}</p>`:''}${p.list?`<table>${p.list.map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.d}</td><td class="l note" style="width:120px">${esc(n.t)}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')}</table>`:''}`).join('')}
+  ${o.disc?`<p class="note" style="margin-top:8px">${esc(o.disc)}</p>`:''}</div>`}
+const STNP={'सकारात्मक':'positive','सतर्क सकारात्मक':'mildpos','तटस्थ':'neutral','मिश्रित':'neutral','कमजोर':'weak','नकारात्मक':'negative'};
 // ---------- शेयर विवरणमा थप ----------
 function warnTxt(s){if(!s.lv)return '';const w=[];if(s.lv.warnAvwapLo)w.push('AVWAP तल');if(s.lv.warnVal)w.push('VAL तल');return w.join(', ')}
 function levelsCard(s){
@@ -603,6 +617,7 @@ function levelsCard(s){
   </div><p class="note">कोष्ठमा: आजको मूल्य यो स्तरभन्दा कति % माथि/तल। जाँचमा "AVWAP तल" र "VAL तल" भएका शेयर अर्को 20 दिनमा बजारभन्दा औसत 0.2–0.9% कमजोर रहे (2018–2026)।</p></div>`;
 }
 function extraDetail(s){
+  const rv=RV?.stocks?.[s.sym];
   let out=levelsCard(s);const r=fundRow(s.sym,s.c);
   if(r){out+=`<div class="card"><b>आधारभूत विश्लेषण</b> <span class="note">${r.F.period} · स्रोत: ${r.F.source.replace('claude/','')}</span><div class="grid" style="margin-top:8px">
     <div class="kv"><span>EPS (वार्षिक, Q1 बाट)</span><b>${r.F.eps_q1a===''?'–':(+r.F.eps_q1a<0?'<span class="n">घाटा</span>':f(+r.F.eps_q1a,2))}</b></div>
