@@ -66,6 +66,7 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
   <div class="chips" id="chips"></div>
 </header>
 <nav>
+  <button data-t="pf">मेरो Portfolio</button>
   <button data-t="mkt" class="on">बजार</button>
   <button data-t="sec">क्षेत्र</button>
   <button data-t="stocks">शेयरहरू</button>
@@ -77,6 +78,47 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
   <button data-t="method">विधि</button>
 </nav>
 <main>
+  <section id="t-pf" hidden>
+    <div class="grid" id="pfSum" style="margin-bottom:14px"></div>
+    <div class="card">
+      <b>शेयर थप्नुहोस्</b> <span class="note">लागत = प्रति कित्ता WACC (Meroshare मा देखिने, कमिसनसहित)। IPO/बोनसको हकमा IPO मूल्य वा बोनसपछिको WACC।</span>
+      <form id="pfForm" class="tools" style="margin-top:8px">
+        <input id="pfSym" list="symList" placeholder="सिम्बोल" size="10" required>
+        <input id="pfQty" type="number" min="1" step="1" placeholder="कित्ता" style="width:90px" required>
+        <input id="pfCost" type="number" min="0" step="0.01" placeholder="प्रति कित्ता लागत" style="width:140px" required>
+        <input id="pfDate" type="date" required>
+        <input id="pfAcct" placeholder="खाता (ऐच्छिक)" size="12">
+        <button type="submit" class="lockbtn" style="float:none;background:var(--acc);color:#fff;border:0;padding:8px 14px;font-size:14px">थप्नुहोस्</button>
+        <span class="note" id="pfMsg"></span>
+      </form>
+    </div>
+    <div class="card"><b>मेरा शेयर</b> <span class="note" id="pfAsOf"></span>
+      <div class="tw"><table id="pfTbl"></table></div>
+      <div id="pfSell"></div>
+      <p class="note">सङ्केतका नियम तल "सङ्केत कसरी" मा छन्। यी नियममा आधारित स्वचालित सङ्केत हुन्, लगानी सल्लाह होइन। Backtest मा स्क्यानको खरिद सङ्केतले भरपर्दो रूपमा बजार जितेको देखिएको छैन।</p>
+    </div>
+    <div class="two">
+      <div class="card"><b>क्षेत्रअनुसार बाँडफाँड</b><div id="pfAlloc" style="margin-top:8px"></div></div>
+      <div class="card"><b>बिक्री गरिसकेका (realized)</b><div class="tw"><table id="pfSales"></table></div></div>
+    </div>
+    <div class="card"><b>खरिद विवरण (lots)</b><div class="tw"><table id="pfLots"></table></div></div>
+    <div class="card"><b>सेटिङ, Backup र सङ्केत कसरी</b>
+      <div class="tools" style="margin-top:8px">
+        <label class="note">पूँजीगत लाभ कर: 365 दिनभन्दा बढी <input id="pfCgtL" type="number" step="0.01" style="width:70px">%</label>
+        <label class="note">365 दिन वा कम <input id="pfCgtS" type="number" step="0.01" style="width:70px">%</label>
+        <label class="note">नोक्सान सीमा <input id="pfStop" type="number" step="0.5" style="width:60px">%</label>
+        <label class="note">एक शेयरको अधिकतम हिस्सा <input id="pfMaxW" type="number" step="1" style="width:60px">%</label>
+        <button class="lockbtn" style="float:none" id="pfSaveSet">सेटिङ सुरक्षित</button>
+      </div>
+      <div class="tools">
+        <button class="lockbtn" style="float:none" id="pfExport">Backup डाउनलोड (encrypted)</button>
+        <label class="lockbtn" style="float:none;cursor:pointer">Backup / CSV import <input type="file" id="pfImport" accept=".json,.csv,.txt" hidden></label>
+        <span class="note">CSV ढाँचा: symbol,qty,cost,date,account (प्रति पङ्क्ति एक खरिद)</span>
+      </div>
+      <p class="note">तपाईंको portfolio यो browser मा मात्र, ड्यासबोर्डकै पासवर्डले encrypt गरेर राखिन्छ। यो GitHub वा कतै पठाइँदैन। अर्को device (जस्तै mobile) मा चाहिए Backup डाउनलोड गरेर त्यहाँ import गर्नुहोस् (उही पासवर्ड चाहिन्छ)। Browser को data मेटाए portfolio पनि मेटिन्छ, त्यसैले बेलाबेला Backup लिनुहोस्।</p>
+      <div class="note" id="pfRules"></div>
+    </div>
+  </section>
   <section id="t-mkt">
     <div class="grid" id="idxCards" style="margin-bottom:14px"></div>
     <div class="card"><b>बजार सूचक (market cap भारित, आफैं गणना गरिएको)</b> <span class="note" id="capNote"></span>
@@ -188,15 +230,16 @@ let D,B,M=null,BR=null,rows=[],sortK='sc',sortDir=-1;
 // ---- password lock: data is published only as AES-256-GCM (key = PBKDF2-SHA256 of the password); see scripts/encrypt_data.js
 const SALT='ntghimire-cloud/nepse-floorsheet:v1',ITER=310000,KS='nepseDashKey';
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async function deriveKey(pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode(SALT),iterations:ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},true,['decrypt'])}
+async function deriveKey(pw){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:new TextEncoder().encode(SALT),iterations:ITER,hash:'SHA-256'},base,{name:'AES-GCM',length:256},true,['encrypt','decrypt'])}
 async function dec(key,url){const j=await (await fetch(url,{cache:'no-cache'})).json();const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.iv)},key,b64(j.ct));return JSON.parse(await new Response(new Blob([pt]).stream().pipeThrough(new DecompressionStream('gzip'))).text())}
-async function openWith(key){const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}try{M=await dec(key,'data/market.enc')}catch(e){M=null}try{BR=await dec(key,'data/brokers.enc')}catch(e){BR=null}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
+let DKEY=null;
+async function openWith(key){DKEY=key;const d=await dec(key,'data/latest.enc');let b=null;try{b=await dec(key,'data/backtest.enc')}catch(e){}try{M=await dec(key,'data/market.enc')}catch(e){M=null}try{BR=await dec(key,'data/brokers.enc')}catch(e){BR=null}D=d;B=b;document.body.classList.remove('locked');$('#lock').hidden=true;$('#relock').hidden=false;init()}
 function showLock(msg){$('#lock').hidden=false;$('#sub').textContent='';$('#lockMsg').textContent=msg||'';$('#pw').focus()}
 (async()=>{
   let st={};try{st=await (await fetch('data/status.json',{cache:'no-cache'})).json()}catch(e){}
   if(st.missingPassword){$('#sub').textContent='डाटा प्रकाशित गरिएको छैन: GitHub Secrets मा DASH_PASSWORD राखिएको छैन।';return}
   const saved=localStorage.getItem(KS)||sessionStorage.getItem(KS);
-  if(saved){try{await openWith(await crypto.subtle.importKey('raw',b64(saved),'AES-GCM',true,['decrypt']));return}catch(e){localStorage.removeItem(KS);sessionStorage.removeItem(KS)}}
+  if(saved){try{await openWith(await crypto.subtle.importKey('raw',b64(saved),'AES-GCM',true,['encrypt','decrypt']));return}catch(e){localStorage.removeItem(KS);sessionStorage.removeItem(KS)}}
   showLock();
 })();
 $('#lockForm').onsubmit=async e=>{e.preventDefault();$('#lockMsg').textContent='जाँच्दै…';$('#unlockBtn').disabled=true;
@@ -360,7 +403,7 @@ function drawScore(cv,s){
 </script>
 <script>
 // ===================== बजार, क्षेत्र, तुलना, ब्रोकर, flows =====================
-const TABS=['mkt','sec','stocks','cmp','brk','pp','acc','ind','method'];
+const TABS=['pf','mkt','sec','stocks','cmp','brk','pp','acc','ind','method'];
 const SECNP={'Commercial Banks':'वाणिज्य बैंक','Development Banks':'विकास बैंक','Finance':'वित्त','Hotels And Tourism':'होटल/पर्यटन','Hydro Power':'जलविद्युत','Investment':'लगानी','Life Insurance':'जीवन बीमा','Manufacturing And Processing':'उत्पादन','Microfinance':'लघुवित्त','Non Life Insurance':'निर्जीवन बीमा','Others':'अन्य','Tradings':'व्यापार'};
 const secOf=sym=>M&&M.sectorOf?M.sectorOf[sym]:null;
 const secShort=s=>s?(SECNP[s]||s):'–';
@@ -383,12 +426,14 @@ function initExtra(){
   $('#cmpIn').onchange=()=>{const v=$('#cmpIn').value.trim().toUpperCase();if(D.stocks.find(s=>s.sym===v)&&!cmpSyms.includes(v)&&cmpSyms.length<4){cmpSyms.push(v);renderCmp()}$('#cmpIn').value=''};
   $('#cmpPer').oninput=renderCmp;
   if(!cmpSyms.length){const top=D.stocks.filter(s=>s.sig==='buy').slice(0,2).map(s=>s.sym);cmpSyms=top.length?top:D.stocks.slice(0,2).map(s=>s.sym)}
+  initPortfolio();
   onTab('mkt');
 }
 function onTab(t){
   if(t==='mkt'&&!drawn.mkt){buildMarket();drawn.mkt=1}
   if(t==='sec'&&!drawn.sec){buildSectors();drawn.sec=1}
   if(t==='cmp'){renderCmp()}
+  if(t==='pf'){pfRender()}
 }
 
 // ---------- generic charts ----------
@@ -575,6 +620,118 @@ function extraDetail(s){
   const q=(M?.flows||[]).find(x=>x.sym===s.sym);
   if(q)out+=`<div class="card"><b>पैसाको प्रवाह</b><div class="grid" style="margin-top:8px"><div class="kv"><span>CMF (5 दिन)</span><b class="${cls(q.cmf5)}">${f(q.cmf5,2)}</b></div><div class="kv"><span>बढ्ने दिनको volume %</span><b>${f(q.upRatio*100,0)}</b></div><div class="kv"><span>Volume 5 दिन / 20 दिन</span><b>${f(q.vol5R,2)}</b></div><div class="kv"><span>आज</span><b>${q.pp==='pull'?'<span class="p">खरिद Pull</span>':q.pp==='push'?'<span class="n">बिक्री Push</span>':'–'}</b></div><div class="kv"><span>5 दिने</span><b>${q.ad==='acc'?'<span class="p">Accumulation</span>':q.ad==='dist'?'<span class="n">Distribution</span>':'–'}</b></div></div></div>`;
   return out;
+}
+</script>
+
+<script>
+// ===================== मेरो Portfolio (browser मा मात्र, ड्यासबोर्डको पासवर्डले encrypt) =====================
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const PFK='nepsePortfolio';
+let PF={v:1,lots:[],sales:[],settings:{cgtL:3.75,cgtS:5,stop:10,maxW:25}};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const todayNp=()=>new Date(Date.now()+(5*60+45)*6e4).toISOString().slice(0,10);
+const daysBetween=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/864e5);
+async function pfEnc(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},DKEY,new TextEncoder().encode(JSON.stringify(obj))));const b=u=>btoa(String.fromCharCode(...u));return {v:1,iv:b(iv),ct:b(ct)}}
+async function pfDec(j){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(j.iv)},DKEY,b64(j.ct));return JSON.parse(new TextDecoder().decode(pt))}
+async function pfSave(){try{localStorage.setItem(PFK,JSON.stringify(await pfEnc(PF)))}catch(e){$('#pfMsg').textContent='सुरक्षित गर्न सकिएन: '+e}}
+async function pfLoad(){try{const j=localStorage.getItem(PFK);if(j){const o=await pfDec(JSON.parse(j));PF={...PF,...o,settings:{...PF.settings,...(o.settings||{})}}}}catch(e){$('#pfMsg').textContent='पुरानो portfolio यो पासवर्डले खुलेन (पासवर्ड बदलिएको हुन सक्छ)। Backup भए import गर्नुहोस्।'}}
+
+// NEPSE equity charges (SEBON slabs): commission on trade value + 0.015% SEBON fee + Rs 25 DP per scrip per day (sell side)
+function commission(v){const r=v<=5e4?0.0036:v<=5e5?0.0033:v<=2e6?0.0031:v<=1e7?0.0027:0.0024;return Math.max(v*r,10)}
+function sellNet(lotsOfSym,price){ // per-lot CGT by holding period; DP once per sale
+  const t=todayNp();let gross=0,cost=0,cgt=0;const val=sum(lotsOfSym.map(l=>l.qty))*price;const ch=commission(val)+val*0.00015+25;
+  for(const l of lotsOfSym){const v=l.qty*price,c=l.qty*l.cost,share=val>0?v/val:0;const g=v-c-ch*share;gross+=v;cost+=c;
+    if(g>0)cgt+=g*(daysBetween(l.date,t)>365?PF.settings.cgtL:PF.settings.cgtS)/100}
+  return {val:gross,cost,charges:ch,cgt,net:gross-cost-ch-cgt};
+}
+
+function holdings(){
+  const g={};for(const l of PF.lots){const k=l.sym+'|'+(l.acct||'');(g[k]??={sym:l.sym,acct:l.acct||'',lots:[]}).lots.push(l)}
+  return Object.values(g).map(h=>{h.qty=sum(h.lots.map(l=>l.qty));h.costT=sum(h.lots.map(l=>l.qty*l.cost));h.avg=h.costT/h.qty;h.first=h.lots.map(l=>l.date).sort()[0];
+    h.s=D.stocks.find(x=>x.sym===h.sym)||null;h.c=h.s?h.s.c:null;h.val=h.c!=null?h.qty*h.c:null;h.pl=h.val!=null?h.val-h.costT:null;h.plPct=h.pl!=null?h.pl/h.costT*100:null;
+    h.day=h.s?h.qty*h.c*(1-1/(1+h.s.chg/100)):null;h.net=h.c!=null?sellNet(h.lots,h.c):null;return h});
+}
+
+// ---- signal rules (transparent; scores unchanged) ----
+function pfSignal(h,totalVal){
+  const s=h.s,R=[];if(!s)return {lvl:'na',txt:'डाटा छैन',R:['यो सिम्बोल दैनिक स्क्यानमा छैन (म्युचुअल फन्ड/डिबेन्चर वा कम कारोबार)।']};
+  const has=k=>s.reasons.find(r=>r.k===k);const pos=k=>(has(k)?.pts||0)>0;
+  const fl=(M?.flows||[]).find(x=>x.sym===h.sym);const lv=s.lv||{};
+  // trailing stop since first purchase: highest close since then − 2.5 × ATR
+  const since=s.hist.filter(r=>r[0]>=h.first);const peak=since.length?Math.max(...since.map(r=>r[4])):s.c;const trail=s.m.atr?peak-2.5*s.m.atr:null;
+  const w=totalVal>0&&h.val!=null?h.val/totalVal*100:0;
+  const sell=[],caut=[],add=[];
+  if(trail!=null&&s.c<trail&&peak>h.avg)sell.push(`खरिदपछिको उच्च ${f(peak)} बाट 2.5×ATR को trailing stop ${f(trail)} तल झर्यो (नाफा जोगाउने)`);
+  if(h.plPct!=null&&h.plPct<=-PF.settings.stop)sell.push(`लागतभन्दा ${f(-h.plPct,1)}% तल: तपाईंले राखेको ${PF.settings.stop}% नोक्सान सीमा नाघ्यो`);
+  if(s.sig==='sell'&&(lv.warnAvwapLo||lv.warnVal))sell.push(`स्क्यान "बिक्री/सावधान" (${sg(s.sc,0)}) र ${lv.warnAvwapLo?'52 हप्ते न्यूनदेखिको AVWAP':'60 दिने VAL'} तल`);
+  if(s.sig==='sell'&&!sell.length)caut.push(`स्क्यान अङ्क ${sg(s.sc,0)} (बिक्री/सावधान)`);
+  if(lv.warnAvwapLo&&!sell.length)caut.push('52 हप्ते न्यूनदेखिको AVWAP तल');
+  if(lv.warnVal&&!sell.length)caut.push('60 दिने value area low तल');
+  if(fl?.ad==='dist')caut.push('पछिल्ला 5 दिन distribution (बिक्री दबाब)');
+  if(has('ema20_slope')&&!pos('ema20_slope')&&has('ema20')&&!pos('ema20'))caut.push('20 EMA तल र ओर्लँदो');
+  if(s.rsi>75&&h.plPct>20)caut.push(`RSI ${f(s.rsi,0)} र ${f(h.plPct,0)}% नाफा: केही नाफा बुक गर्ने विचार`);
+  if(w>PF.settings.maxW)caut.push(`portfolio को ${f(w,0)}% एउटै शेयरमा (सीमा ${PF.settings.maxW}%)`);
+  const addOk=s.sig==='buy'&&pos('ema20_slope')&&pos('ema20')&&!lv.warnAvwapLo&&!lv.warnVal&&s.rsi<70&&fl?.ad!=='dist'&&h.c>=h.avg*0.97&&w<PF.settings.maxW;
+  if(addOk)add.push(`स्क्यान किन्न योग्य (${sg(s.sc,0)}), 20 EMA माथि र उक्लँदो, RSI ${f(s.rsi,0)}, चेतावनी छैन, लागतभन्दा तल छैन`);
+  if(sell.length)return {lvl:'sell',txt:'बिक्री विचार',R:sell.concat(caut),trail,peak,w};
+  if(caut.length)return {lvl:'caut',txt:'सावधान',R:caut,trail,peak,w};
+  if(add.length)return {lvl:'add',txt:'थप्न सकिने',R:add,trail,peak,w};
+  return {lvl:'hold',txt:'होल्ड',R:[`स्क्यान ${SIG[s.sig]} (${sg(s.sc,0)}); बिक्री वा थप्ने सर्त पूरा भएन`],trail,peak,w};
+}
+const LVLCLS={sell:'s-sell',caut:'s-watch',add:'s-buy',hold:'s-hold',na:'s-hold'};
+
+function pfRender(){
+  $('#pfCgtL').value=PF.settings.cgtL;$('#pfCgtS').value=PF.settings.cgtS;$('#pfStop').value=PF.settings.stop;$('#pfMaxW').value=PF.settings.maxW;
+  if(!$('#pfDate').value)$('#pfDate').value=todayNp();
+  const H=holdings();const tv=sum(H.filter(h=>h.val!=null).map(h=>h.val)),tc=sum(H.map(h=>h.costT)),pl=sum(H.filter(h=>h.pl!=null).map(h=>h.pl)),day=sum(H.filter(h=>h.day!=null).map(h=>h.day));
+  const net=sum(H.filter(h=>h.net).map(h=>h.net.net)),real=sum(PF.sales.map(x=>x.net));
+  $('#pfAsOf').textContent=`मूल्य: ${D.date} को close`;
+  const kv=(n,v,c='')=>`<div class="kv"><span>${n}</span><b class="${c}">${v}</b></div>`;
+  $('#pfSum').innerHTML=H.length?kv('कुल लगानी (लागत)','रु. '+num(tc))+kv('हालको बजार मूल्य','रु. '+num(tv))+kv('नाफा/नोक्सान',`रु. ${num(pl)} (${sg(tc?pl/tc*100:0,2)}%)`,cls(pl))+kv('आजको परिवर्तन','रु. '+num(day),cls(day))+kv('अहिले सबै बेचे खुद (कर, शुल्कपछि)','रु. '+num(net),cls(net))+kv('बिक्री गरिसकेको खुद नाफा','रु. '+num(real),cls(real))
+    :'<div class="warn">अहिलेसम्म कुनै शेयर राखिएको छैन। तलको form बाट थप्नुहोस्, वा CSV/Backup import गर्नुहोस्।</div>';
+  const sigs=H.map(h=>pfSignal(h,tv));
+  const order={sell:0,caut:1,add:2,hold:3,na:4};const idx=H.map((h,i)=>i).sort((a,b)=>order[sigs[a].lvl]-order[sigs[b].lvl]||(H[b].val||0)-(H[a].val||0));
+  $('#pfTbl').innerHTML=H.length?`<thead><tr><th class="l">सिम्बोल</th><th class="l">खाता</th><th>कित्ता</th><th>औसत लागत</th><th>LTP</th><th>आज %</th><th>बजार मूल्य</th><th>नाफा/नोक्सान</th><th>%</th><th>हिस्सा %</th><th>दिन</th><th>Trailing stop</th><th class="l">सङ्केत</th><th class="l">कारण</th><th></th></tr></thead><tbody>${idx.map(i=>{const h=H[i],g=sigs[i];return `<tr style="cursor:default"><td>${symLink(h.sym)}<div class="note">${secShort(secOf(h.sym))}</div></td><td class="l note">${h.acct||'–'}</td><td>${num(h.qty)}</td><td>${f(h.avg,2)}</td><td>${f(h.c)}</td><td class="${cls(h.s?.chg)}">${sg(h.s?.chg,2)}</td><td>${num(h.val)}</td><td class="${cls(h.pl)}">${num(h.pl)}</td><td class="${cls(h.plPct)}">${sg(h.plPct,1)}</td><td>${f(g.w,1)}</td><td>${daysBetween(h.first,todayNp())}</td><td>${f(g.trail)}</td><td class="l"><span class="sig ${LVLCLS[g.lvl]}">${g.txt}</span></td><td class="l note" style="white-space:normal;min-width:220px">${g.R.join('; ')}</td><td><button class="lockbtn" style="float:none" data-sell="${h.sym}|${h.acct}">बेचेँ</button></td></tr>`}).join('')}</tbody>`:'';
+  $('#pfTbl').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>pfSellForm(b.dataset.sell));
+  // allocation
+  const al={};H.forEach(h=>{if(h.val!=null){const k=secShort(secOf(h.sym));al[k]=(al[k]||0)+h.val}});
+  $('#pfAlloc').innerHTML=Object.entries(al).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><span style="width:110px">${k}</span><div class="bar" style="flex:1"><i style="width:${v/tv*100}%"></i></div><span style="width:120px;text-align:right">${f(v/tv*100,1)}% · ${num(v)}</span></div>`).join('')||'<span class="note">–</span>';
+  $('#pfLots').innerHTML=PF.lots.length?`<thead><tr><th class="l">सिम्बोल</th><th class="l">खाता</th><th>मिति</th><th>कित्ता</th><th>लागत</th><th>कर दर (अहिले बेचे)</th><th></th></tr></thead><tbody>${[...PF.lots].sort((a,b)=>a.sym<b.sym?-1:1).map(l=>`<tr style="cursor:default"><td>${l.sym}</td><td class="l note">${l.acct||'–'}</td><td>${l.date}</td><td>${num(l.qty)}</td><td>${f(l.cost,2)}</td><td>${daysBetween(l.date,todayNp())>365?PF.settings.cgtL:PF.settings.cgtS}%</td><td><button class="lockbtn" style="float:none" data-del="${l.id}">हटाउनुहोस्</button></td></tr>`).join('')}</tbody>`:'<tr><td class="note">–</td></tr>';
+  $('#pfLots').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.confirm){PF.lots=PF.lots.filter(l=>l.id!==b.dataset.del);await pfSave();pfRender()}else{b.dataset.confirm=1;b.textContent='पक्का? फेरि थिच्नुहोस्'}});
+  $('#pfSales').innerHTML=PF.sales.length?`<thead><tr><th class="l">सिम्बोल</th><th>मिति</th><th>कित्ता</th><th>बिक्री मूल्य</th><th>लागत</th><th>खुद नाफा</th><th></th></tr></thead><tbody>${[...PF.sales].sort((a,b)=>a.date<b.date?1:-1).map(x=>`<tr style="cursor:default"><td>${x.sym}${x.acct?` <span class="note">${x.acct}</span>`:''}</td><td>${x.date}</td><td>${num(x.qty)}</td><td>${f(x.price,2)}</td><td>${f(x.cost,2)}</td><td class="${cls(x.net)}">${num(x.net)}</td><td><button class="lockbtn" style="float:none" data-sdel="${x.id}">✕</button></td></tr>`).join('')}</tbody>`:'<tr><td class="note">–</td></tr>';
+  $('#pfSales').querySelectorAll('[data-sdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.confirm){PF.sales=PF.sales.filter(x=>x.id!==b.dataset.sdel);await pfSave();pfRender()}else{b.dataset.confirm=1;b.textContent='पक्का?'}});
+  $('#pfRules').innerHTML=`<b>सङ्केत कसरी:</b> (1) <b>बिक्री विचार</b>: खरिदपछिको सबैभन्दा उच्च close बाट 2.5×ATR तल झरेमा (नाफामा रहेको शेयर), लागतभन्दा ${PF.settings.stop}% वा बढी नोक्सान भएमा, वा स्क्यान "बिक्री/सावधान" हुनुका साथै AVWAP/VAL चेतावनी पनि भएमा। (2) <b>सावधान</b>: स्क्यान बिक्री/सावधान, AVWAP वा VAL तल, 5 दिने distribution, 20 EMA तल र ओर्लँदो, RSI 75+ सँगै 20%+ नाफा, वा एउटै शेयर portfolio को ${PF.settings.maxW}% भन्दा बढी। (3) <b>थप्न सकिने</b>: स्क्यान किन्न योग्य, 20 EMA माथि र उक्लँदो (backtest मा दुवै अवधिमा काम गरेका), RSI 70 तल, कुनै चेतावनी नभएको, मूल्य औसत लागतभन्दा 3% भन्दा तल नभएको (घाटामा थप्ने होइन), र हिस्सा सीमाभित्र। (4) बाँकी <b>होल्ड</b>। खुद नाफा: ब्रोकर कमिसन (SEBON स्ल्याब 0.36%–0.24%), SEBON शुल्क 0.015%, DP रु. 25 र पूँजीगत लाभ कर (365 दिनभन्दा बढी ${PF.settings.cgtL}%, कम ${PF.settings.cgtS}%) घटाएर अनुमान।`;
+}
+function pfSellForm(key){
+  const [sym,acct]=key.split('|');const h=holdings().find(x=>x.sym===sym&&x.acct===acct);if(!h)return;
+  $('#pfSell').innerHTML=`<div class="warn" style="margin-top:10px"><b>${sym}${acct?' ('+acct+')':''} बिक्री दर्ता</b> <span class="note">पुराना lot पहिले घट्छन् (FIFO)</span>
+   <form id="pfSellF" class="tools" style="margin-top:6px"><input id="psQty" type="number" min="1" max="${h.qty}" step="1" value="${h.qty}" style="width:90px"> कित्ता
+   <input id="psPrice" type="number" step="0.01" value="${h.c??''}" style="width:110px" placeholder="बिक्री मूल्य"> <input id="psDate" type="date" value="${todayNp()}">
+   <button class="lockbtn" style="float:none;background:var(--acc);color:#fff;border:0" type="submit">दर्ता गर्नुहोस्</button> <button class="lockbtn" style="float:none" type="button" id="psCancel">रद्द</button></form></div>`;
+  $('#psCancel').onclick=()=>$('#pfSell').innerHTML='';
+  $('#pfSellF').onsubmit=async e=>{e.preventDefault();let q=Math.min(+$('#psQty').value,h.qty);const price=+$('#psPrice').value,date=$('#psDate').value;if(!(q>0&&price>0&&date))return;
+    const lots=PF.lots.filter(l=>l.sym===sym&&(l.acct||'')===acct).sort((a,b)=>a.date<b.date?-1:1);const used=[];let rem=q;
+    for(const l of lots){if(rem<=0)break;const take=Math.min(l.qty,rem);used.push({...l,qty:take});l.qty-=take;rem-=take}
+    PF.lots=PF.lots.filter(l=>l.qty>0);
+    const val=q*price,ch=commission(val)+val*0.00015+25;let cost=0,cgt=0;
+    for(const u of used){const v=u.qty*price,c=u.qty*u.cost,g=v-c-ch*(v/val);cost+=c;if(g>0)cgt+=g*(daysBetween(u.date,date)>365?PF.settings.cgtL:PF.settings.cgtS)/100}
+    PF.sales.push({id:uid(),sym,acct,qty:q,price,date,cost:cost/q,net:val-cost-ch-cgt});await pfSave();$('#pfSell').innerHTML='';pfRender()};
+}
+function pfAddLot(sym,qty,cost,date,acct){sym=String(sym||'').trim().toUpperCase();qty=Math.round(+qty);cost=+cost;if(!sym||!(qty>0)||!(cost>=0)||!/^\d{4}-\d\d-\d\d$/.test(date||''))return false;PF.lots.push({id:uid(),sym,qty,cost,date,acct:String(acct||'').trim()});return true}
+
+function initPortfolio(){
+  $('#pfForm').onsubmit=async e=>{e.preventDefault();const sym=$('#pfSym').value.trim().toUpperCase();
+    const ok=pfAddLot(sym,$('#pfQty').value,$('#pfCost').value,$('#pfDate').value,$('#pfAcct').value);
+    if(!ok){$('#pfMsg').textContent='विवरण मिलेन।';return}
+    await pfSave();$('#pfMsg').textContent=(D.stocks.find(x=>x.sym===sym)?'':'⚠️ यो सिम्बोल स्क्यानमा छैन, मूल्य देखिँदैन। ')+sym+' थपियो।';
+    ['pfSym','pfQty','pfCost'].forEach(id=>$('#'+id).value='');pfRender()};
+  $('#pfSaveSet').onclick=async()=>{PF.settings={cgtL:+$('#pfCgtL').value||0,cgtS:+$('#pfCgtS').value||0,stop:+$('#pfStop').value||10,maxW:+$("#pfMaxW").value||25};await pfSave();pfRender()};
+  $('#pfExport').onclick=async()=>{const blob=new Blob([JSON.stringify(await pfEnc(PF))],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nepse-portfolio-'+todayNp()+'.json';a.click();URL.revokeObjectURL(a.href)};
+  $('#pfImport').onchange=async e=>{const file=e.target.files[0];if(!file)return;const txt=await file.text();
+    try{if(file.name.endsWith('.json')){const o=await pfDec(JSON.parse(txt));PF={...PF,...o,settings:{...PF.settings,...(o.settings||{})}};$('#pfMsg').textContent='Backup import भयो।'}
+      else{let n=0;for(const line of txt.trim().split(/\r?\n/)){const p=line.split(',').map(x=>x.trim());if(/symbol/i.test(p[0]))continue;if(pfAddLot(p[0],p[1],p[2],p[3],p[4]))n++}$('#pfMsg').textContent=n+' वटा खरिद CSV बाट थपिए।'}
+      await pfSave();pfRender()}catch(err){$('#pfMsg').textContent='Import हुन सकेन (अर्कै पासवर्डको backup वा गलत ढाँचा)।'}e.target.value=''};
+  pfLoad().then(()=>{if(PF.lots.length){document.querySelector('nav button[data-t=pf]').click()}});
 }
 </script>
 
