@@ -41,6 +41,18 @@ function fundRow(sym, c) {
   return { F, eps, epsQ, epsL, loss: eps != null && eps < 0, pe: eps > 0 ? c / eps : null, peL: epsL > 0 ? c / epsL : null, bvps, pb: bvps ? c / bvps : null, roe: num(F.roe), npl: num(F.npl), car: num(F.car) };
 }
 
+// ---------- RSI divergence text ----------
+const DIV = M.div || { stocks: {}, sectors: {} };
+function divText(d, what) {
+  if (!d) return null;
+  const core = d.type === 'bear'
+    ? `${what} ${d.a.d} मा ${n2(d.a.c)} को शिखरपछि ${d.b.d} मा झन् उच्च ${n2(d.b.c)} बनायो, तर RSI ${n1(d.a.r)} बाट ${n1(d.b.r)} मा झर्यो — Bearish RSI divergence (माथि जाने गति कमजोर हुँदै)। `
+    : `${what} ${d.a.d} मा ${n2(d.a.c)} को न्यूनपछि ${d.b.d} मा झन् तल ${n2(d.b.c)} बनायो, तर RSI ${n1(d.a.r)} बाट ${n1(d.b.r)} मा उक्लियो — Bullish RSI divergence (तल जाने गति कमजोर हुँदै)। `;
+  const ev = d.type === 'bear'
+    ? 'NEPSE को 2018–2026 जाँचमा bearish divergence पछि शेयरको 20 दिने प्रतिफल बजारभन्दा खासै फरक देखिएन (t करिब 0), त्यसैले यो एक्लै बिक्री सङ्केत होइन; stop-loss र प्रवृत्तिसँगै हेर्नुहोस्।'
+    : 'NEPSE को 2018–2026 जाँचमा bullish divergence पछि शेयर औसतमा 20 दिनमा बजारभन्दा 1.2–1.4% कमजोर रहे (2024–26 मा t −4.2), त्यसैले यो एक्लै खरिद सङ्केत होइन; मूल्य 20 दिने EMA माथि फर्किएर प्रवृत्ति पुष्टि भएपछि मात्र विचार गर्नुहोस्।';
+  return core + ev;
+}
 // ---------- stock technical review ----------
 function stockTech(s) {
   const H = s.hist, C = H.map(r => r[4]), i = C.length - 1, c = s.c, m = s.m, lv = s.lv || {};
@@ -86,6 +98,8 @@ function stockTech(s) {
       (w && BR.dates.thisWeek.length > 1 ? ` यो हप्ता (${BR.dates.thisWeek.length} दिन) शीर्ष net खरिदकर्ता #${w.netBuyers[0]?.[0] ?? '–'} र बिक्रेता #${w.netSellers[0]?.[0] ?? '–'}।` : '') +
       ' (Floorsheet 2026-11-26 देखि मात्र जम्मा भइरहेकाले ब्रोकर सूचकको backtest अझै भएको छैन।)' });
   }
+  const dv = divText(DIV.stocks?.[s.sym], 'मूल्यले');
+  if (dv) P.push({ h: 'RSI Divergence', t: dv });
   // 5. levels
   const lv_ = [];
   const add = (v, n) => { if (v != null && isFinite(v) && v > 0) lv_.push({ v, n }) };
@@ -166,6 +180,10 @@ function marketReview() {
   if (secs.length) P.push({ h: 'क्षेत्र', t: `20 दिनमा सबैभन्दा बलिया क्षेत्र: ${secs.slice(0, 3).map(s => `${secNp(s.sector)} (${p(s.r20)})`).join(', ')}; कमजोर: ${secs.slice(-3).reverse().map(s => `${secNp(s.sector)} (${p(s.r20)})`).join(', ')}। ` +
     `हालै पैसा बढी आइरहेका (कारोबार 5/20 > 1.15): ${(M.sectors || []).filter(s => s.turn5vs20 > 1.15).map(s => secNp(s.sector)).join(', ') || 'छैन'}।` });
   const F = M.flows || [];
+  const dS = Object.entries(DIV.stocks || {});
+  P.push({ h: 'RSI Divergence', t: (DIV.market ? divText(DIV.market, 'बजार सूचकले') + ' ' : 'बजार सूचकमा हाल RSI divergence छैन। ') +
+    (Object.keys(DIV.sectors || {}).length ? `क्षेत्रमा: ${Object.entries(DIV.sectors).map(([k, v]) => `${secNp(k)} (${v.type === 'bear' ? 'Bearish' : 'Bullish'})`).join(', ')}। ` : 'कुनै क्षेत्रमा हाल divergence छैन। ') +
+    `शेयरमा: Bearish ${dS.filter(x => x[1].type === 'bear').length} (${dS.filter(x => x[1].type === 'bear').map(x => x[0]).join(', ') || '–'}), Bullish ${dS.filter(x => x[1].type === 'bull').length} (${dS.filter(x => x[1].type === 'bull').map(x => x[0]).join(', ') || '–'})।` });
   P.push({ h: 'पैसाको प्रवाह र स्क्यान', t: `आज खरिद Pull ${F.filter(x => x.pp === 'pull').length} र बिक्री Push ${F.filter(x => x.pp === 'push').length} शेयरमा देखियो; 5 दिने Accumulation ${F.filter(x => x.ad === 'acc').length} र Distribution ${F.filter(x => x.ad === 'dist').length}। स्क्यानमा किन्न योग्य ${L.counts.buy}, निगरानी ${L.counts.watch}, होल्ड ${L.counts.hold} र बिक्री/सावधान ${L.counts.sell}।` });
   let stance = 'मिश्रित', sug;
   if (b != null && m50) {
@@ -188,6 +206,8 @@ function sectorReview(sr) {
     (M.market?.r20 != null && sr.r20 != null ? ` 20 दिनमा बजारभन्दा ${Math.abs(sr.r20 - M.market.r20).toFixed(1)} प्रतिशत-अङ्क ${sr.r20 >= M.market.r20 ? 'बलियो' : 'कमजोर'}।` : '') });
   P.push({ h: 'चौडाइ र कारोबार', t: `आज ${sr.adv} कम्पनी बढे र ${sr.dec} घटे। ${n1(sr.pctAbove50)}% कम्पनी आफ्नो 50 दिने औसत माथि छन्; औसत स्क्यान अङ्क ${n1(sr.avgScore)}। कारोबार ${crore(sr.turnover)}; 5 दिने औसत कारोबार 20 दिनेको ${n2(sr.turn5vs20)} गुणा — ` + (sr.turn5vs20 > 1.15 ? 'हालै पैसा बढी आइरहेको।' : sr.turn5vs20 < 0.85 ? 'हालै चासो घटेको।' : 'सामान्य।') +
     ` स्क्यान: किन्न योग्य ${sr.cnt.buy}, निगरानी ${sr.cnt.watch}, होल्ड ${sr.cnt.hold}, बिक्री/सावधान ${sr.cnt.sell}। Accumulation: ${sr.acc.join(', ') || 'छैन'}; Distribution: ${sr.dist.join(', ') || 'छैन'}।` });
+  const sd = DIV.sectors?.[sr.sector], sst = stocks.filter(x => DIV.stocks?.[x.sym]);
+  P.push({ h: 'RSI Divergence', t: (sd ? divText(sd, 'क्षेत्र सूचकले') + ' ' : 'क्षेत्र सूचकमा हाल RSI divergence छैन। ') + (sst.length ? `क्षेत्रका शेयरमा: ${sst.map(x => `${x.sym} (${DIV.stocks[x.sym].type === 'bear' ? 'Bearish' : 'Bullish'})`).join(', ')}।` : '') });
   P.push({ h: 'शेयरहरू', t: `प्राविधिक रूपमा बलिया: ${best.map(s => `${s.sym} (${s.sc > 0 ? '+' : ''}${s.sc})`).join(', ')}। कमजोर: ${worst.map(s => `${s.sym} (${s.sc})`).join(', ')}।` });
   if (fr.length >= 3) P.push({ h: 'आधारभूत (उपलब्ध ' + fr.length + ' कम्पनी)', t: `मध्यिका P/E ${n1(median(fr.map(q => q.pe)))}, P/B ${n2(median(fr.map(q => q.pb)))}${median(fr.map(q => q.roe)) != null ? `, ROE ${n1(median(fr.map(q => q.roe)))}%` : ''}${median(fr.map(q => q.npl)) != null ? `, NPL ${n2(median(fr.map(q => q.npl)))}%` : ''}। सबैभन्दा कम P/E: ${fr.filter(q => q.pe).sort((a, b) => a.pe - b.pe).slice(0, 3).map(q => `${q.F.symbol} (${n1(q.pe)})`).join(', ')}।` });
   const strong = sr.aboveIdx50 && sr.pctAbove50 >= 50 && M.market?.r20 != null && sr.r20 >= M.market.r20, weak = !sr.aboveIdx50 && sr.pctAbove50 < 35;

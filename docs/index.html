@@ -175,6 +175,7 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
     <div class="warn" id="accNote"></div>
     <div class="card"><b class="p">Accumulation (पछिल्ला 5 दिन)</b><div class="tw"><table id="accTbl"></table></div></div>
     <div class="card"><b class="n">Distribution (पछिल्ला 5 दिन)</b><div class="tw"><table id="distTbl"></table></div></div>
+    <div class="card"><b>RSI Divergence (हाल)</b> <span class="note">Swing high/low (दुवैतिर 3 दिन) मा आधारित, पछिल्लो 60 दिनभित्र, दोस्रो बिन्दु 10 दिनभित्र। Bearish: मूल्य उच्च शिखर तर RSI तल। Bullish: मूल्य तल्लो न्यून तर RSI माथि। NEPSE जाँच (2018–26): bearish पछि 20 दिनमा प्रभाव देखिएन; bullish पछि शेयर उल्टै बजारभन्दा 1.2–1.4% कमजोर रहे। त्यसैले जानकारी मात्र।</span><div id="divMkt" class="note" style="margin:6px 0"></div><div class="tw"><table id="divTbl"></table></div></div>
   </section>
   <section id="t-stocks" hidden>
     <div class="warn" id="warnScore"></div>
@@ -401,6 +402,7 @@ function drawPrice(cv,s){
   line(m200a,'#9b59b6');line(m50,'#b7791f');line(e20,'#2f9e9e');line(C,css('--ink'),1.8);
   g.setLineDash([5,4]);g.strokeStyle=css('--neg');g.beginPath();g.moveTo(X(st),Y(s.stop));g.lineTo(w-pad.r,Y(s.stop));g.stroke();g.setLineDash([]);
   if(s.lv){const ai=H.findIndex(r=>r[0]===s.lv.avwapLoFrom);if(ai>=0){const av=[];let pv=0,vv=0;for(let i=0;i<H.length;i++){if(i>=ai){pv+=(H[i][2]+H[i][3]+H[i][4])/3*H[i][5];vv+=H[i][5]}av.push(i>=ai&&vv>0?pv/vv:null)}line(av.map(v=>v!=null&&v>=lo&&v<=hi?v:null),'#e64980',1.6)}
+    const dv=M?.div?.stocks?.[s.sym];if(dv){const ia=H.findIndex(r=>r[0]===dv.a.d),ib=H.findIndex(r=>r[0]===dv.b.d);if(ia>=st&&ib>=st){g.strokeStyle=dv.type==='bear'?css('--neg'):css('--pos');g.lineWidth=2.5;g.setLineDash([6,3]);g.beginPath();g.moveTo(X(ia),Y(H[ia][4]));g.lineTo(X(ib),Y(H[ib][4]));g.stroke();g.setLineDash([]);g.fillStyle=g.strokeStyle;g.font='bold 11px system-ui';g.fillText(dv.type==='bear'?'Bearish div':'Bullish div',X(ib)-60,Y(H[ib][4])+(dv.type==='bear'?-8:16))}}
     const x0=X(Math.max(st,H.length-61));g.strokeStyle='#868e96';g.lineWidth=1;for(const [v,dash] of [[s.lv.poc,[]],[s.lv.vah,[2,3]],[s.lv.val,[2,3]]]){if(v==null||v<lo||v>hi)continue;g.setLineDash(dash);g.beginPath();g.moveTo(x0,Y(v));g.lineTo(w-pad.r,Y(v));g.stroke()}g.setLineDash([])}
   g.fillStyle=css('--mute');for(const i of [st,st+Math.floor(show/2),H.length-1])g.fillText(H[i][0],Math.min(X(i),w-70),h-3);
 }
@@ -506,7 +508,7 @@ function buildMarket(){
 let secSort='r20',secDir=-1;
 function buildSectors(){
   if(!M)return;
-  const cols=[['sector','क्षेत्र'],['sub','उप-सूचक आज'],['r1','1 दिन %'],['r5','5 दिन %'],['r20','20 दिन %'],['r60','60 दिन %'],['r250','1 वर्ष %'],['trend','प्रवृत्ति'],['ad','बढ्ने/घट्ने'],['turnover','कारोबार करोड'],['turn5vs20','कारोबार 5/20'],['pctAbove50','50 MA माथि %'],['avgScore','औसत अङ्क'],['cnt','किन्न/बिक्री'],['ad5','Acc/Dist']];
+  const cols=[['sector','क्षेत्र'],['sub','उप-सूचक आज'],['r1','1 दिन %'],['r5','5 दिन %'],['r20','20 दिन %'],['r60','60 दिन %'],['r250','1 वर्ष %'],['trend','प्रवृत्ति'],['ad','बढ्ने/घट्ने'],['turnover','कारोबार करोड'],['turn5vs20','कारोबार 5/20'],['pctAbove50','50 MA माथि %'],['avgScore','औसत अङ्क'],['cnt','किन्न/बिक्री'],['ad5','Acc/Dist'],['div','RSI Div']];
   $('#secTbl thead').innerHTML='<tr>'+cols.map(([k,n],i)=>`<th data-k="${k}" class="${i?'':'l'}">${n}</th>`).join('')+'</tr>';
   $('#secTbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(secSort===k)secDir*=-1;else{secSort=k;secDir=-1}renderSec()};
   $('#secTbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)secDetail(tr.dataset.sec)};
@@ -518,7 +520,7 @@ function renderSec(){
   $('#secTbl tbody').innerHTML=rs.map(x=>`<tr data-sec="${x.sector}"><td><b>${secShort(x.sector)}</b> <span class="note">${x.scanned}</span></td><td>${x.sub?`${f(x.sub.value,1)} <span class="${cls(x.sub.chg)}">${sg(x.sub.chg,2)}%</span>`:'–'}</td>
    ${['r1','r5','r20','r60','r250'].map(k=>`<td class="${cls(x[k])}">${sg(x[k],2)}</td>`).join('')}<td>${x.aboveIdx50==null?'–':x.aboveIdx50?'<span class="p">50 दिने माथि ↑</span>':'<span class="n">तल ↓</span>'}</td>
    <td><span class="p">${x.adv}</span>/<span class="n">${x.dec}</span></td><td>${crore(x.turnover)}</td><td class="${x.turn5vs20>1.15?'p':x.turn5vs20<0.85?'n':''}">${f(x.turn5vs20,2)}</td><td>${f(x.pctAbove50,0)}</td><td class="${cls(x.avgScore)}">${sg(x.avgScore,1)}</td>
-   <td><span class="p">${x.cnt.buy}</span>/<span class="n">${x.cnt.sell}</span></td><td><span class="p">${x.acc.length}</span>/<span class="n">${x.dist.length}</span></td></tr>`).join('');
+   <td><span class="p">${x.cnt.buy}</span>/<span class="n">${x.cnt.sell}</span></td><td><span class="p">${x.acc.length}</span>/<span class="n">${x.dist.length}</span></td><td>${x.div==='bear'?'<span class="n">Bearish</span>':x.div==='bull'?'<span class="p">Bullish</span>':'–'}</td></tr>`).join('');
 }
 function drawSecBars(){
   if(!M)return;const k=$('#secPer').value;const cv=$('#cvSec');const [g,w,h]=setup(cv);
@@ -605,7 +607,11 @@ function buildFlows(){
   const ah=`<thead><tr><th class="l">सिम्बोल</th><th class="l">क्षेत्र</th><th>LTP</th><th>5 दिन %</th><th>CMF 5</th><th>बढ्ने दिन volume %</th><th>Volume 5/20</th><th>ब्रोकर एकाग्रता %</th><th>अङ्क</th><th class="l">सङ्केत</th><th class="l">शीर्ष Net खरिद ब्रोकर (5 दिन)</th></tr></thead>`;
   $('#accTbl').innerHTML=ah+'<tbody>'+(F.filter(x=>x.ad==='acc').sort((a,b)=>b.cmf5-a.cmf5).map(aRow).join('')||'<tr><td class="note">छैन</td></tr>')+'</tbody>';
   $('#distTbl').innerHTML=ah+'<tbody>'+(F.filter(x=>x.ad==='dist').sort((a,b)=>a.cmf5-b.cmf5).map(aRow).join('')||'<tr><td class="note">छैन</td></tr>')+'</tbody>';
-  document.querySelectorAll('#pullTbl tr[data-s],#pushTbl tr[data-s],#accTbl tr[data-s],#distTbl tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
+  const DV=M.div||{stocks:{},sectors:{}};
+  $('#divMkt').innerHTML='बजार सूचक: '+(DV.market?(DV.market.type==='bear'?'<b class="n">Bearish</b>':'<b class="p">Bullish</b>'):'छैन')+' · क्षेत्र: '+(Object.entries(DV.sectors||{}).map(([k,v])=>secShort(k)+' ('+(v.type==='bear'?'Bearish':'Bullish')+')').join(', ')||'छैन');
+  const dr=Object.entries(DV.stocks||{}).sort((a,b)=>a[1].type<b[1].type?-1:1);
+  $('#divTbl').innerHTML=`<thead><tr><th class="l">सिम्बोल</th><th class="l">क्षेत्र</th><th class="l">प्रकार</th><th class="l">पहिलो बिन्दु (मिति, मूल्य, RSI)</th><th class="l">दोस्रो बिन्दु</th><th>दिन अघि</th><th>RSI आज</th></tr></thead><tbody>${dr.map(([s,d])=>`<tr data-s="${s}"><td>${symLink(s)}</td><td class="l note">${secShort(secOf(s))}</td><td class="l">${d.type==='bear'?'<span class="n">Bearish</span>':'<span class="p">Bullish</span>'}</td><td class="l note">${d.a.d} · ${f(d.a.c)} · ${f(d.a.r,0)}</td><td class="l note">${d.b.d} · ${f(d.b.c)} · ${f(d.b.r,0)}</td><td>${d.ago}</td><td>${f(d.rsi,0)}</td></tr>`).join('')||'<tr><td class="note">छैन</td></tr>'}</tbody>`;
+  document.querySelectorAll('#pullTbl tr[data-s],#pushTbl tr[data-s],#accTbl tr[data-s],#distTbl tr[data-s],#divTbl tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
 }
 
 // ---------- लिखित समीक्षा ----------
@@ -615,7 +621,7 @@ function rvHtml(o,title,stance,cls_){if(!o)return '';return `<div class="card rv
   ${o.disc?`<p class="note" style="margin-top:8px">${esc(o.disc)}</p>`:''}</div>`}
 const STNP={'सकारात्मक':'positive','सतर्क सकारात्मक':'mildpos','तटस्थ':'neutral','मिश्रित':'neutral','कमजोर':'weak','नकारात्मक':'negative'};
 // ---------- शेयर विवरणमा थप ----------
-function warnTxt(s){if(!s.lv)return '';const w=[];if(s.lv.warnAvwapLo)w.push('AVWAP तल');if(s.lv.warnVal)w.push('VAL तल');return w.join(', ')}
+function warnTxt(s){const w=[];if(s.lv?.warnAvwapLo)w.push('AVWAP तल');if(s.lv?.warnVal)w.push('VAL तल');const d=M?.div?.stocks?.[s.sym];if(d)w.push(d.type==='bear'?'Bearish div':'<span class="p">Bullish div</span>');return w.join(', ')}
 function levelsCard(s){
   const L=s.lv;if(!L)return '';const d=v=>v==null?'':` <span class="note ${cls(s.c-v)}">(${sg((s.c/v-1)*100,1)}%)</span>`;
   const kv=(n,v,x)=>`<div class="kv"><span>${n}</span><b>${f(v)}</b>${d(v)}${x?`<div class="note">${x}</div>`:''}</div>`;

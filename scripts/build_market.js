@@ -188,15 +188,33 @@ if (T) {
     r1: ret(mktSeries, 1), r5: ret(mktSeries, 5), r20: ret(mktSeries, 20), r60: ret(mktSeries, 60), r250: retY(mktSeries) };
 }
 
+// ---------- RSI divergence (regular, pivot-based; same rules as research/walkforward_div.py) ----------
+function rsiW(C, n = 14) { const o = new Array(C.length).fill(null); if (C.length <= n) return o; let g = 0, l = 0;
+  for (let i = 1; i <= n; i++) { const d = C[i] - C[i - 1]; if (d > 0) g += d; else l -= d } g /= n; l /= n; o[n] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+  for (let i = n + 1; i < C.length; i++) { const d = C[i] - C[i - 1]; g = (g * (n - 1) + (d > 0 ? d : 0)) / n; l = (l * (n - 1) + (d < 0 ? -d : 0)) / n; o[i] = l === 0 ? 100 : 100 - 100 / (1 + g / l) } return o }
+function divergence(D, C, k = 3, lookback = 60, gap = 5) {
+  // D dates, C closes. Pivot at p is confirmed k bars later. Signal active if the 2nd pivot was within the last 10 days (+k).
+  const n = C.length; if (n < 40) return null; const R = rsiW(C), t = n - 1; const ph = [], pl = [];
+  for (let p = Math.max(k, t - lookback); p <= t - k; p++) { const w = C.slice(p - k, p + k + 1); if (C[p] === Math.max(...w)) ph.push(p); if (C[p] === Math.min(...w)) pl.push(p) }
+  const pt = i => ({ d: D[i], c: r2(C[i]), r: r2(R[i]) });
+  if (ph.length >= 2) { const a = ph.at(-2), b = ph.at(-1); if (b - a >= gap && t - b <= 10 + k && C[b] > C[a] && R[b] < R[a] - 2 && R[a] >= 55) return { type: 'bear', a: pt(a), b: pt(b), ago: t - b, rsi: r2(R[t]) } }
+  if (pl.length >= 2) { const a = pl.at(-2), b = pl.at(-1); if (b - a >= gap && t - b <= 10 + k && C[b] < C[a] && R[b] > R[a] + 2 && R[a] <= 45) return { type: 'bull', a: pt(a), b: pt(b), ago: t - b, rsi: r2(R[t]) } }
+  return null;
+}
+const div = { market: divergence(mktSeries.map(x => x[0]), mktSeries.map(x => x[1])), sectors: {}, stocks: {} };
+for (const sr of secRows) { const d = divergence(sr.series.map(x => x[0]), sr.series.map(x => x[1])); if (d) div.sectors[sr.sector] = d; sr.div = d ? d.type : null }
+for (const s of rep.stocks) { const d = divergence(s.hist.map(r => r[0]), s.hist.map(r => r[4])); if (d) div.stocks[s.sym] = d }
+
 // ---------- fundamentals ----------
 const fpath = path.join(DATA, 'fundamentals.csv');
 const fund = fs.existsSync(fpath) ? Object.fromEntries(csv(fs.readFileSync(fpath, 'utf8')).map(f => [f.symbol, f])) : {};
 
 const market = { date: today, generated: new Date().toISOString(), priceDays: days.length, priceFrom: days[0]?.date || null,
   official, officialHist, capIndex: mktSeries.slice(-250), breadthHist, market: mkt, sectors: secRows, sectorOf, nameOf,
-  flows, fundamentals: fund };
+  flows, fundamentals: fund, div };
 const brokersOut = { date: lastF, dates: usedDates, thisWeekStart: thisW, lastWeekStart: prevW, brokers, stocks: stockBrokers };
 fs.writeFileSync(path.join(OUT, 'market.json'), JSON.stringify(market));
 fs.writeFileSync(path.join(OUT, 'brokers.json'), JSON.stringify(brokersOut));
+console.log(`RSI divergence: market ${div.market?.type || '-'}, sectors ${JSON.stringify(Object.fromEntries(Object.entries(div.sectors).map(([k, v]) => [k, v.type])))}, stocks bear ${Object.values(div.stocks).filter(x => x.type === 'bear').length} bull ${Object.values(div.stocks).filter(x => x.type === 'bull').length}`);
 console.log(`market.json: ${days.length} price days, ${sectors.length} sectors, ${flows.length} flows (pull ${flows.filter(f => f.pp === 'pull').length}, push ${flows.filter(f => f.pp === 'push').length}, acc ${flows.filter(f => f.ad === 'acc').length}, dist ${flows.filter(f => f.ad === 'dist').length})`);
 console.log(`brokers.json: ${brokers.length} brokers, floorsheet days ${fdates.length}, periods ${JSON.stringify(usedDates)}`);
