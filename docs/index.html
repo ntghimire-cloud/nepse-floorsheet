@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEPSE स्क्यान ड्यासबोर्ड</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f4080">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NEPSE स्क्यान">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1b1f24;--mute:#667085;--line:#e4e7ec;--acc:#2f6fdb;--buy:#12805c;--watch:#b7791f;--hold:#667085;--sell:#c4320a;--pos:#12805c;--neg:#c4320a;--chip:#eef2f7}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1216;--card:#171b21;--ink:#e6e9ee;--mute:#98a2b3;--line:#2a3038;--acc:#6ea0ff;--buy:#3ccf91;--watch:#f2b84b;--hold:#98a2b3;--sell:#ff7a59;--pos:#3ccf91;--neg:#ff7a59;--chip:#222831}}
@@ -750,5 +758,8 @@ function initPortfolio(){
 }
 </script>
 
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
 </body>
 </html>
