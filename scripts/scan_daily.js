@@ -34,6 +34,19 @@ if(process.env.REPORT_OUT){
     hist:groups[a.sym].map(r=>[r.ds,r2(r.o),r2(r.h),r2(r.l),r2(r.c),Math.round(r.v)])}));
   // score history (last 60 sessions, market filter not applied) and floorsheet broker split for the scan date
   for(const st of stocks){const rows=groups[st.sym];const h=[];for(let j=Math.max(0,rows.length-60);j<rows.length;j++){const x=analyze(st.sym,rows.slice(0,j+1),DEF,null);if(!x.err)h.push([rows[j].ds,x.sc])}st.scoreHist=h}
+  // Anchored VWAP (from 52-week low / high day) and 60-day Volume Profile — information + warnings only, not scored
+  // (walk-forward 2026-11-27: close below AVWAP-from-52w-low and close below the prior 60-day value-area low both underperformed in 2018-23 and 2024-26)
+  const lvl=H=>{const n=H.length,i=n-1;if(n<70)return null;
+    const a0=Math.max(0,n-252);let iLo=a0,iHi=a0;for(let k=a0;k<n;k++){if(H[k][3]<H[iLo][3])iLo=k;if(H[k][2]>H[iHi][2])iHi=k}
+    const av=a=>{let pv=0,vv=0;for(let k=a;k<n;k++){const tp=(H[k][2]+H[k][3]+H[k][4])/3;pv+=tp*H[k][5];vv+=H[k][5]}return vv>0?pv/vv:null};
+    const W=H.slice(n-61,n-1);const lo=Math.min(...W.map(r=>r[3])),hi=Math.max(...W.map(r=>r[2]));let poc=null,vah=null,val=null;
+    if(hi>lo){const B=24,prof=new Array(B).fill(0);for(const r of W){if(!(r[5]>0))continue;const i0=Math.min(Math.floor((r[3]-lo)/(hi-lo)*B),B-1),i1=Math.min(Math.floor((r[2]-lo)/(hi-lo)*B),B-1);for(let k=i0;k<=i1;k++)prof[k]+=r[5]/(i1-i0+1)}
+      let k=prof.indexOf(Math.max(...prof));const e=j=>lo+(hi-lo)*j/B;poc=(e(k)+e(k+1))/2;let L=k,U=k,tot=prof[k];const tgt=0.7*prof.reduce((x,y)=>x+y,0);
+      while(tot<tgt){const up=U+1<B?prof[U+1]:-1,dn=L>0?prof[L-1]:-1;if(up>=dn){U++;tot+=up}else{L--;tot+=dn}}vah=e(U+1);val=e(L)}
+    const c=H[i][4],aLo=av(iLo),aHi=av(iHi);
+    return {avwapLo:r2(aLo),avwapLoFrom:H[iLo][0],avwapHi:r2(aHi),avwapHiFrom:H[iHi][0],poc:r2(poc),vah:r2(vah),val:r2(val),
+      warnAvwapLo:aLo!=null&&c<aLo,warnVal:val!=null&&c<val}};
+  for(const st of stocks)st.lv=lvl(st.hist);
   const fsFile=process.argv[3]?path.join(process.argv[3],'floorsheet',latest+'.csv.gz'):null;
   if(fsFile&&fs.existsSync(fsFile)){
     const L=require('zlib').gunzipSync(fs.readFileSync(fsFile)).toString().trim().split(/\r?\n/);const Hh=L[0].split(',');const ix=k=>Hh.indexOf(k);const agg={};

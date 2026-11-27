@@ -136,7 +136,10 @@ for (const [sym, per] of Object.entries(S)) {
     const nb = net.filter(z => z[1] > 0).sort((a, b) => b[1] - a[1]), ns = net.filter(z => z[1] < 0).sort((a, b) => a[1] - b[1]);
     const top5b = sum(nb.slice(0, 5).map(z => z[1])), top5s = -sum(ns.slice(0, 5).map(z => z[1]));
     o[p] = { tot: x.tot, amt: Math.round(x.amt), nBuy: Object.values(x.br).filter(z => z[0] > 0).length, nSell: Object.values(x.br).filter(z => z[1] > 0).length,
-      netBuyers: nb.slice(0, 5), netSellers: ns.slice(0, 5), conc: r2((top5b - top5s) / x.tot * 100), top5b: r2(top5b / x.tot * 100), top5s: r2(top5s / x.tot * 100) };
+      netBuyers: nb.slice(0, 5), netSellers: ns.slice(0, 5), conc: r2((top5b - top5s) / x.tot * 100), top5b: r2(top5b / x.tot * 100), top5s: r2(top5s / x.tot * 100),
+      // broker asymmetry (information only, not yet backtested): Herfindahl concentration of buying vs selling; >0 = buying more concentrated
+      hhiB: r2(sum(Object.values(x.br).map(z => (z[0] / x.tot) ** 2)) * 100), hhiS: r2(sum(Object.values(x.br).map(z => (z[1] / x.tot) ** 2)) * 100) };
+    o[p].asym = r2(o[p].hhiB - o[p].hhiS); o[p].ratio = o[p].nBuy ? r2(o[p].nSell / o[p].nBuy) : null;
   }
   stockBrokers[sym] = o;
 }

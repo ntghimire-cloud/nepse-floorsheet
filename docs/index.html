@@ -174,6 +174,9 @@ const IND=[
  {k:'illiq',n:'कम कारोबार',w:'−1',d:'20 दिने औसत कारोबार 2,000 कित्ताभन्दा कम।',side:'neg'},
  {k:'brk',n:'20 दिने resistance तोड्नु',w:'0 (जानकारी)',d:'2026-11-26 देखि अङ्क हटाइएको (walk-forward मा कमजोर)। टिप्पणीमा मात्र।',side:'info'},
  {k:'squeeze',n:'Bollinger squeeze',w:'0 (जानकारी)',d:'Band width 120 दिनको तल्लो 10% मा।',side:'info'},
+ {k:'avwap',n:'Anchored VWAP (52 हप्ते न्यूनबाट)',w:'0 (चेतावनी)',d:'Close यो VWAP तल भए चेतावनी। जाँच (2026-11-27): तल रहेका शेयर अर्को 20 दिनमा बजारभन्दा −0.20% (2018–23, t −3.0) र −0.34% (2024–26, t −3.5)। माथि फर्किनु (reclaim) ले काम गरेन।',side:'info'},
+ {k:'vp',n:'Volume Profile (60 दिन)',w:'0 (चेतावनी)',d:'Close अघिल्लो 60 दिनको value area low (VAL) तल भए चेतावनी: −0.90% (t −6.4) र −0.36% (t −2.1)। VAH breakout र VCP ले काम गरेनन्।',side:'info'},
+ {k:'basym',n:'Broker Asymmetry',w:'0 (जानकारी)',d:'खरिद र बिक्रीको Herfindahl एकाग्रता र ब्रोकर सङ्ख्याको अनुपात। Floorsheet 2026-11-26 देखि मात्र भएकाले 3–6 महिनापछि जाँचिनेछ।',side:'info'},
  {k:'macd',n:'MACD',w:'हटाइएको',d:'2026-11-26 देखि स्कोरमा छैन: NEPSE मा bullish crossover पछि बजारभन्दा कमजोर (train र test दुवैमा)। मान विवरणमा मात्र देखाइन्छ।',side:'info'},
 ];
 const $=s=>document.querySelector(s);
@@ -229,8 +232,8 @@ function init(){
   const goHash=()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&D.stocks.find(s=>s.sym===h))openD(h)};goHash();window.addEventListener('hashchange',goHash);
 }
 
-const COLS=[['sym','सिम्बोल'],['sec','क्षेत्र'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %']];
-function val(s,k){if(k==='sec')return secOf(s.sym)||'';if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
+const COLS=[['sym','सिम्बोल'],['sec','क्षेत्र'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %'],['warn','चेतावनी']];
+function val(s,k){if(k==='sec')return secOf(s.sym)||'';if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='warn')return s.lv?(s.lv.warnAvwapLo?1:0)+(s.lv.warnVal?1:0):null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
 function buildTable(){
   $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<3?'l':''}">${n}</th>`).join('')+'</tr>';
   $('#tbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=k==='sym'?1:-1}renderRows()};
@@ -243,7 +246,7 @@ function renderRows(){
   r.sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir||b.sc-a.sc});
   $('#cnt').textContent=r.length+' शेयर';
   $('#tbl tbody').innerHTML=r.map(s=>{const d=val(s,'dsc');const isNew=s.prevSig&&s.sig!==s.prevSig;const b3=val(s,'b3');
-    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l note">${secShort(secOf(s.sym))}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td></tr>`}).join('');
+    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l note">${secShort(secOf(s.sym))}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td><td class="l n" style="font-size:12px">${warnTxt(s)}</td></tr>`}).join('');
 }
 
 function buildInd(){
@@ -296,11 +299,13 @@ function openD(sym){
   if(m.hi52&&s.c>=0.95*m.hi52)ai.push('मूल्य 52 हप्ते उच्चको 5% भित्र छ।');
   if(m.ma200&&s.c<0.7*m.ma200)ai.push('मूल्य 200 MA भन्दा 30%+ तल छ।');
   if(s.illiq)ai.push('कारोबार कम भएकाले सूचक कम भरपर्दो।');
+  if(s.lv&&s.lv.warnAvwapLo)ai.push('⚠️ मूल्य 52 हप्ते न्यूनदेखिको AVWAP ('+f(s.lv.avwapLo)+') तल छ।');
+  if(s.lv&&s.lv.warnVal)ai.push('⚠️ मूल्य 60 दिने value area low ('+f(s.lv.val)+') तल झरेको छ।');
   $('#dbox').innerHTML=`<button class="x" onclick="closeD()">बन्द ✕</button>
   <h2 style="margin:0">${s.sym} <span class="sig s-${s.sig}" style="vertical-align:middle">${SIG[s.sig]}</span> <span style="font-size:15px">अङ्क ${sg(s.sc,0)}</span>${s.prevSc!=null?` <span class="note">(हिजो ${sg(s.prevSc,0)}, ${SIG[s.prevSig]||'–'})</span>`:''}</h2>
   <div class="sub">${s.date} · LTP <b>${f(s.c)}</b> <span class="${cls(s.chg)}">${sg(s.chg,2)}%</span></div>
   ${ai.length?`<div class="warn" style="margin-top:10px">${ai.join(' ')}</div>`:''}
-  <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span></div><canvas id="cv" height="300"></canvas></div>
+  <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span><span><i style="background:#e64980"></i>AVWAP (52 हप्ते न्यूनबाट)</span><span><i style="background:#868e96"></i>POC / VAH / VAL (60 दिन)</span></div><canvas id="cv" height="300"></canvas></div>
   <div class="two"><div class="card"><b>अङ्क इतिहास (60 दिन)</b><canvas id="cv2" height="140"></canvas></div>
   <div class="card"><b>मुख्य मान</b><div class="grid" style="margin-top:8px">
    ${kv('20 EMA',f(m.ema20)+pct(s.c,m.ema20))}${kv('50 MA',f(m.ma50)+pct(s.c,m.ma50))}${kv('200 MA',f(m.ma200)+pct(s.c,m.ma200))}
@@ -339,6 +344,8 @@ function drawPrice(cv,s){
   const m200a=maArr(C,200);
   line(m200a,'#9b59b6');line(m50,'#b7791f');line(e20,'#2f9e9e');line(C,css('--ink'),1.8);
   g.setLineDash([5,4]);g.strokeStyle=css('--neg');g.beginPath();g.moveTo(X(st),Y(s.stop));g.lineTo(w-pad.r,Y(s.stop));g.stroke();g.setLineDash([]);
+  if(s.lv){const ai=H.findIndex(r=>r[0]===s.lv.avwapLoFrom);if(ai>=0){const av=[];let pv=0,vv=0;for(let i=0;i<H.length;i++){if(i>=ai){pv+=(H[i][2]+H[i][3]+H[i][4])/3*H[i][5];vv+=H[i][5]}av.push(i>=ai&&vv>0?pv/vv:null)}line(av.map(v=>v!=null&&v>=lo&&v<=hi?v:null),'#e64980',1.6)}
+    const x0=X(Math.max(st,H.length-61));g.strokeStyle='#868e96';g.lineWidth=1;for(const [v,dash] of [[s.lv.poc,[]],[s.lv.vah,[2,3]],[s.lv.val,[2,3]]]){if(v==null||v<lo||v>hi)continue;g.setLineDash(dash);g.beginPath();g.moveTo(x0,Y(v));g.lineTo(w-pad.r,Y(v));g.stroke()}g.setLineDash([])}
   g.fillStyle=css('--mute');for(const i of [st,st+Math.floor(show/2),H.length-1])g.fillText(H[i][0],Math.min(X(i),w-70),h-3);
 }
 function drawScore(cv,s){
@@ -541,8 +548,17 @@ function buildFlows(){
 }
 
 // ---------- शेयर विवरणमा थप ----------
+function warnTxt(s){if(!s.lv)return '';const w=[];if(s.lv.warnAvwapLo)w.push('AVWAP तल');if(s.lv.warnVal)w.push('VAL तल');return w.join(', ')}
+function levelsCard(s){
+  const L=s.lv;if(!L)return '';const d=v=>v==null?'':` <span class="note ${cls(s.c-v)}">(${sg((s.c/v-1)*100,1)}%)</span>`;
+  const kv=(n,v,x)=>`<div class="kv"><span>${n}</span><b>${f(v)}</b>${d(v)}${x?`<div class="note">${x}</div>`:''}</div>`;
+  return `<div class="card"><b>मूल्य स्तर: Anchored VWAP र Volume Profile</b> <span class="note">जानकारी र चेतावनी मात्र, अङ्कमा जोडिँदैन</span><div class="grid" style="margin-top:8px">
+   ${kv('AVWAP (52 हप्ते न्यूनबाट)',L.avwapLo,L.avwapLoFrom+' देखि'+(L.warnAvwapLo?' · <span class="n">⚠️ मूल्य तल</span>':''))}${kv('AVWAP (52 हप्ते उच्चबाट)',L.avwapHi,L.avwapHiFrom+' देखि')}
+   ${kv('POC (60 दिन)',L.poc,'सबैभन्दा बढी कारोबार भएको मूल्य')}${kv('VAH',L.vah,'value area माथिल्लो सीमा')}${kv('VAL',L.val,'value area तल्लो सीमा'+(L.warnVal?' · <span class="n">⚠️ मूल्य तल</span>':''))}
+  </div><p class="note">कोष्ठमा: आजको मूल्य यो स्तरभन्दा कति % माथि/तल। जाँचमा "AVWAP तल" र "VAL तल" भएका शेयर अर्को 20 दिनमा बजारभन्दा औसत 0.2–0.9% कमजोर रहे (2018–2026)।</p></div>`;
+}
 function extraDetail(s){
-  let out='';const r=fundRow(s.sym,s.c);
+  let out=levelsCard(s);const r=fundRow(s.sym,s.c);
   if(r){out+=`<div class="card"><b>आधारभूत विश्लेषण</b> <span class="note">${r.F.period} · स्रोत: ${r.F.source.replace('claude/','')}</span><div class="grid" style="margin-top:8px">
     <div class="kv"><span>EPS (वार्षिक, Q1 बाट)</span><b>${r.F.eps_q1a===''?'–':(+r.F.eps_q1a<0?'<span class="n">घाटा</span>':f(+r.F.eps_q1a,2))}</b></div>
     <div class="kv"><span>EPS (गत वर्ष)</span><b>${r.F.eps_ly===''?'–':(+r.F.eps_ly<0?'<span class="n">घाटा</span>':f(+r.F.eps_ly,2))}</b></div>
@@ -555,7 +571,7 @@ function extraDetail(s){
   if(sec){const peers=D.stocks.filter(x=>secOf(x.sym)===sec).sort((a,b)=>b.sc-a.sc).slice(0,12);
     out+=`<div class="card"><b>${secShort(sec)} क्षेत्रका समकक्षी</b><div class="tw"><table><thead><tr><th class="l">सिम्बोल</th><th>LTP</th><th>20 दिन %</th><th>RSI</th><th>अङ्क</th><th>P/E</th><th>P/B</th><th>ROE %</th></tr></thead><tbody>${peers.map(x=>{const q=fundRow(x.sym,x.c);return `<tr data-s="${x.sym}" style="${x.sym===s.sym?'background:var(--chip)':''}"><td>${symLink(x.sym)}</td><td>${f(x.c)}</td><td class="${cls(x.m.r20)}">${sg(x.m.r20,1)}</td><td>${f(x.rsi,0)}</td><td>${sg(x.sc,0)}</td><td>${q?(q.loss?'घाटा':f(q.pe,1)):'–'}</td><td>${q?f(q.pb,2):'–'}</td><td>${q?f(q.roe,1):'–'}</td></tr>`}).join('')}</tbody></table></div></div>`}
   const sb=BR?.stocks?.[s.sym];
-  if(sb){out+=`<div class="card"><b>ब्रोकर Net (कित्ता)</b><div class="two">${PER_LIST.filter(p=>sb[p]).map(p=>`<div><b class="note">${PERN[p]} · कुल ${num(sb[p].tot)} कित्ता · एकाग्रता ${sg(sb[p].conc,0)}%</b><table><tbody>${sb[p].netBuyers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="p">+${num(nq)}</td></tr>`).join('')}${sb[p].netSellers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="n">${num(nq)}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div></div>`}
+  if(sb){out+=`<div class="card"><b>ब्रोकर Net (कित्ता)</b><div class="two">${PER_LIST.filter(p=>sb[p]).map(p=>`<div><b class="note">${PERN[p]} · कुल ${num(sb[p].tot)} कित्ता · एकाग्रता ${sg(sb[p].conc,0)}%</b><div class="note">ब्रोकर: खरिद ${sb[p].nBuy} / बिक्री ${sb[p].nSell} (अनुपात ${f(sb[p].ratio,2)}) · HHI खरिद ${f(sb[p].hhiB,1)} / बिक्री ${f(sb[p].hhiS,1)} → Asymmetry <b class="${cls(sb[p].asym)}">${sg(sb[p].asym,1)}</b></div><table><tbody>${sb[p].netBuyers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="p">+${num(nq)}</td></tr>`).join('')}${sb[p].netSellers.map(([id,nq])=>`<tr style="cursor:default"><td class="l">#${id}</td><td class="n">${num(nq)}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div></div>`}
   const q=(M?.flows||[]).find(x=>x.sym===s.sym);
   if(q)out+=`<div class="card"><b>पैसाको प्रवाह</b><div class="grid" style="margin-top:8px"><div class="kv"><span>CMF (5 दिन)</span><b class="${cls(q.cmf5)}">${f(q.cmf5,2)}</b></div><div class="kv"><span>बढ्ने दिनको volume %</span><b>${f(q.upRatio*100,0)}</b></div><div class="kv"><span>Volume 5 दिन / 20 दिन</span><b>${f(q.vol5R,2)}</b></div><div class="kv"><span>आज</span><b>${q.pp==='pull'?'<span class="p">खरिद Pull</span>':q.pp==='push'?'<span class="n">बिक्री Push</span>':'–'}</b></div><div class="kv"><span>5 दिने</span><b>${q.ad==='acc'?'<span class="p">Accumulation</span>':q.ad==='dist'?'<span class="n">Distribution</span>':'–'}</b></div></div></div>`;
   return out;
