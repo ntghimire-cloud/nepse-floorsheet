@@ -66,6 +66,25 @@ canvas{width:100%;display:block}
 #lock button,.lockbtn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:8px 16px;font:inherit;cursor:pointer}
 .lockbtn{background:var(--card);color:var(--mute);border:1px solid var(--line);padding:4px 10px;font-size:12px;float:right}
 body.locked nav,body.locked main,body.locked #chips{display:none}
+.lt-buy{background:var(--buy)}.lt-watch{background:#2b8a3e99}.lt-no{background:var(--hold)}.lt-sell{background:var(--sell)}.lt-na{background:#adb5bd}
+.st-fav{background:var(--buy)}.st-neu{background:var(--hold)}.st-unf{background:var(--sell)}
+.sigbox{border:2px solid var(--acc);border-radius:12px;padding:12px 14px;margin:12px 0 14px;background:var(--card)}
+.sigbox .row{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}.sigbox .row>div{flex:1;min-width:220px;background:var(--chip);border-radius:8px;padding:8px 10px}
+.sigbox p{margin:8px 0 0;line-height:1.8}
+.prbtn{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 12px;cursor:pointer;font:inherit;float:right;margin-left:6px}
+@media print{
+ :root{--bg:#fff;--card:#fff;--ink:#000;--mute:#444;--line:#bbb;--chip:#f1f3f5}
+ body{background:#fff;font-size:12px}
+ nav,#relock,#chips,.prbtn,.x,.lockbtn,form,.tools,button{display:none!important}
+ .tw{max-height:none;overflow:visible}.card,.sigbox,.rv{break-inside:avoid-page}
+ th{position:static}
+ .sig,.stance,.rv .stance{color:#000!important;background:none!important;border:1px solid #000}
+ body.pr-detail header,body.pr-detail main{display:none}
+ body.pr-detail #detail{position:static;display:block!important;background:none;overflow:visible}
+ body.pr-detail #detail .box{margin:0;max-width:none;padding:0}
+ body.pr-sec main>section{display:none!important}
+ body.pr-sec main>section.pr-on{display:block!important}
+}
 </style>
 </head>
 <body class="locked">
@@ -102,7 +121,7 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
         <span class="note" id="pfMsg"></span>
       </form>
     </div>
-    <div class="card"><b>मेरा शेयर</b> <span class="note" id="pfAsOf"></span>
+    <div class="card"><button class="prbtn" onclick="doPrint('pr-sec','t-pf')">Portfolio प्रिन्ट 🖨</button><b>मेरा शेयर</b> <span class="note" id="pfAsOf"></span>
       <div class="tw"><table id="pfTbl"></table></div>
       <div id="pfSell"></div>
       <p class="note">सङ्केतका नियम तल "सङ्केत कसरी" मा छन्। यी नियममा आधारित स्वचालित सङ्केत हुन्, लगानी सल्लाह होइन। Backtest मा स्क्यानको खरिद सङ्केतले भरपर्दो रूपमा बजार जितेको देखिएको छैन।</p>
@@ -131,7 +150,9 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
   </section>
   <section id="t-mkt">
     <div class="grid" id="idxCards" style="margin-bottom:14px"></div>
+    <div><button class="prbtn" onclick="doPrint('pr-sec','t-mkt')">बजार समीक्षा प्रिन्ट 🖨</button></div>
     <div id="mktReview"></div>
+    <div id="mktSig"></div>
     <div class="card"><b>बजार सूचक (market cap भारित, आफैं गणना गरिएको)</b> <span class="note" id="capNote"></span>
       <div class="legend"><span><i style="background:var(--acc)"></i>सबै कम्पनी (cap-weighted)</span><span><i style="background:var(--watch)"></i>NEPSE आधिकारिक (जम्मा भएका दिन)</span></div><canvas id="cvMkt" height="240"></canvas></div>
     <div class="two">
@@ -182,7 +203,9 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
     <div class="card">
       <div class="tools">
         <input id="q" placeholder="सिम्बोल खोज्नुहोस्…" size="18">
-        <select id="fsig"><option value="">सबै सङ्केत</option><option value="buy">किन्न योग्य</option><option value="watch">निगरानी</option><option value="hold">होल्ड</option><option value="sell">बिक्री/सावधान</option></select>
+        <select id="fsig"><option value="">स्क्यान: सबै</option><option value="buy">किन्न योग्य</option><option value="watch">निगरानी</option><option value="hold">होल्ड</option><option value="sell">बिक्री/सावधान</option></select>
+        <select id="flt"><option value="">दीर्घकालीन: सबै</option><option value="val">खरिद + निगरानी</option><option value="buy">दीर्घकालीन खरिद</option><option value="watch">दीर्घकालीन निगरानी</option><option value="no">Graham योग्य छैन</option><option value="sell">बिक्री विचार</option><option value="na">डाटा छैन</option></select>
+        <select id="fst"><option value="">छोटो अवधि: सबै</option><option value="fav">अनुकूल</option><option value="neu">तटस्थ</option><option value="unf">प्रतिकूल</option></select>
         <select id="fsec"><option value="">सबै क्षेत्र</option></select>
         <select id="fnew"><option value="">सबै</option><option value="new">आज नयाँ सङ्केत मात्र</option></select>
         <span class="note" id="cnt"></span>
@@ -203,6 +226,18 @@ body.locked nav,body.locked main,body.locked #chips{display:none}
     </div>
   </section>
   <section id="t-method" hidden>
+    <div class="card rv"><b>दीर्घकालीन र छोटो अवधिका सङ्केत कसरी दिइन्छ</b>
+      <h4>दीर्घकालीन — Benjamin Graham (The Intelligent Investor), NEPSE अनुकूलनसहित</h4>
+      <p><b>दीर्घकालीन खरिद:</b> Defensive investor का सातै मापदण्ड पूरा — पर्याप्त आकार, बलियो वित्तीय अवस्था, आम्दानीको स्थिरता, लाभांश इतिहास, आम्दानी वृद्धि, मध्यम P/E (≤15), मध्यम P/B (≤1.5 वा P/E × P/B ≤ 22.5)।
+      <b>दीर्घकालीन निगरानी:</b> P/E र P/B मापदण्डभित्र, मूल्य Graham number (√(22.5 × EPS × book value)) भन्दा तल (सुरक्षाको सीमा), र कुनै मापदण्ड असफल नभएको — बाँकी मापदण्डको डाटा आउन बाँकी।
+      <b>बिक्री विचार:</b> मूल्य Graham number को 1.5 गुणाभन्दा माथि, वा कम्पनी घाटामा, वा NPL 10% वा बढी।
+      <b>NEPSE अनुकूलन:</b> लाभांश इतिहास 20 को सट्टा 10 वर्ष, नगद वा बोनस दुवैलाई लाभांश मानिन्छ। आधारभूत तथ्याङ्क नआएका कम्पनीमा "डाटा छैन" देखिन्छ।</p>
+      <h4>छोटो अवधि — John J. Murphy (Ten Laws of Technical Trading)</h4>
+      <p>प्रवृत्ति (200 MA, 40 हप्ते MA, Dow theory), support/resistance, retracement, trendline, moving average, RSI/Stochastic, MACD, ADX, volume (OBV, CMF, ब्रोकर) — सबैका सकारात्मक र नकारात्मक प्रमाण गनेर <b>अनुकूल</b>, <b>तटस्थ</b> वा <b>प्रतिकूल</b>।
+      <b>Backtest (2018–2026, हरेक 5 दिनमा 63,000 अवलोकन):</b> "अनुकूल" अवस्थाका शेयरले अर्को 20 दिनमा बजारलाई औसत 0.1–0.3% र 60 दिनमा 0–0.9% मात्र जिते; "कमजोर/प्रतिकूल" ले 2018–23 मा 20 दिनमा −0.3% र 60 दिनमा −0.9% हारे (t ≈ −2 देखि −2.8)। कारोबार लागत करिब 1% भएकाले यो सङ्केतले एक्लै नाफा दिँदैन — यसको मुख्य उपयोग कमजोर शेयरबाट टाढा रहन र किन्ने समय छान्न हो।</p>
+      <h4>दुवै मिलाएर</h4>
+      <p>मूल्य (Graham) र समय (Murphy) दुवै अनुकूल → "मूल्य र समय दुवै अनुकूल"; Graham खरिद/निगरानी तर प्राविधिक अनुकूल नभए → "मूल्य राम्रो, समय पर्खने वा थोरै-थोरै किन्ने"; Graham योग्य नभए पनि प्राविधिक अनुकूल → "छोटो अवधिको कारोबार मात्र, stop-loss अनिवार्य"; Graham बिक्री विचार → "टाढा रहने"। सबै नियममा आधारित स्वचालित सङ्केत हुन्, लगानी सल्लाह होइन।</p>
+    </div>
     <div class="card" id="methodBox"></div>
   </section>
 </main>
@@ -281,28 +316,28 @@ function init(){
   rows=D.stocks;
   buildTable();buildInd();buildMethod();
   document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));TABS.forEach(t=>$('#t-'+t).hidden=t!==b.dataset.t);onTab(b.dataset.t)});
-  ['q','fsig','fnew','fsec'].forEach(id=>$('#'+id).oninput=renderRows);
+  ['q','fsig','fnew','fsec','flt','fst'].forEach(id=>$('#'+id).oninput=renderRows);
   initExtra();
   $('#detail').onclick=e=>{if(e.target.id==='detail')closeD()};
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
   const goHash=()=>{const h=decodeURIComponent(location.hash.slice(1)).toUpperCase();if(h&&D.stocks.find(s=>s.sym===h))openD(h)};goHash();window.addEventListener('hashchange',goHash);
 }
 
-const COLS=[['sym','सिम्बोल'],['sec','क्षेत्र'],['sig','सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %'],['warn','चेतावनी']];
-function val(s,k){if(k==='sec')return secOf(s.sym)||'';if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='warn')return s.lv?(s.lv.warnAvwapLo?1:0)+(s.lv.warnVal?1:0):null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];return s[k]}
+const COLS=[['sym','सिम्बोल'],['sec','क्षेत्र'],['lt','दीर्घकालीन (Graham)'],['st','छोटो अवधि (Murphy)'],['sig','स्क्यान सङ्केत'],['sc','अङ्क'],['dsc','अङ्क परिवर्तन'],['c','LTP'],['chg','आज %'],['r20','20 दिन %'],['rsi','RSI'],['volR','Vol ×'],['stop','Stop-loss'],['risk','जोखिम %'],['b3','शीर्ष ३ खरिद ब्रोकर %'],['warn','चेतावनी']];
+function val(s,k){if(k==='sec')return secOf(s.sym)||'';if(k==='dsc')return s.prevSc==null?null:s.sc-s.prevSc;if(k==='r20')return s.m.r20;if(k==='b3')return s.broker?s.broker.top3Buy:null;if(k==='warn')return s.lv?(s.lv.warnAvwapLo?1:0)+(s.lv.warnVal?1:0):null;if(k==='sig')return {buy:3,watch:2,hold:1,sell:0}[s.sig];if(k==='lt'){const g=sigOf(s.sym);return g?{buy:4,watch:3,no:2,na:1,sell:0}[g.lt]:null}if(k==='st'){const g=sigOf(s.sym);return g?{fav:2,neu:1,unf:0}[g.st]:null}return s[k]}
 function buildTable(){
-  $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<3?'l':''}">${n}</th>`).join('')+'</tr>';
+  $('#tbl thead').innerHTML='<tr>'+COLS.map(([k,n],i)=>`<th data-k="${k}" class="${i<5?'l':''}">${n}</th>`).join('')+'</tr>';
   $('#tbl thead').onclick=e=>{const k=e.target.dataset.k;if(!k)return;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=k==='sym'?1:-1}renderRows()};
   $('#tbl tbody').onclick=e=>{const tr=e.target.closest('tr');if(tr)openD(tr.dataset.s)};
   renderRows();
 }
 function renderRows(){
-  const q=$('#q').value.trim().toUpperCase(),fs=$('#fsig').value,fn=$('#fnew').value,fc=$('#fsec').value;
-  let r=rows.filter(s=>(!q||s.sym.includes(q))&&(!fs||s.sig===fs)&&(!fn||s.sig!==s.prevSig)&&(!fc||secOf(s.sym)===fc));
+  const q=$('#q').value.trim().toUpperCase(),fs=$('#fsig').value,fn=$('#fnew').value,fc=$('#fsec').value,fl=$('#flt').value,ft=$('#fst').value;
+  let r=rows.filter(s=>{const g=sigOf(s.sym);return (!q||s.sym.includes(q))&&(!fs||s.sig===fs)&&(!fn||s.sig!==s.prevSig)&&(!fc||secOf(s.sym)===fc)&&(!fl||(fl==='val'?g&&(g.lt==='buy'||g.lt==='watch'):g?.lt===fl))&&(!ft||g?.st===ft)});
   r.sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);if(x==null)return 1;if(y==null)return -1;return (x>y?1:x<y?-1:0)*sortDir||b.sc-a.sc});
   $('#cnt').textContent=r.length+' शेयर';
   $('#tbl tbody').innerHTML=r.map(s=>{const d=val(s,'dsc');const isNew=s.prevSig&&s.sig!==s.prevSig;const b3=val(s,'b3');
-    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l note">${secShort(secOf(s.sym))}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td><td class="l n" style="font-size:12px">${warnTxt(s)}</td></tr>`}).join('');
+    return `<tr data-s="${s.sym}"><td><b>${s.sym}</b></td><td class="l note">${secShort(secOf(s.sym))}</td><td class="l">${ltB(sigOf(s.sym))}</td><td class="l">${stB(sigOf(s.sym))}</td><td class="l"><span class="sig s-${s.sig}">${SIG[s.sig]}</span>${isNew?'<span class="new">नयाँ</span>':''}</td><td><b>${sg(s.sc,0)}</b></td><td class="${cls(d)}">${d?sg(d,0):'–'}</td><td>${f(s.c)}</td><td class="${cls(s.chg)}">${sg(s.chg,2)}</td><td class="${cls(s.m.r20)}">${sg(s.m.r20,1)}</td><td>${f(s.rsi,0)}${s.rsi>70?' ⚠️':''}</td><td>${f(s.volR,2)}</td><td>${f(s.stop)}</td><td>${f(s.risk,1)}</td><td>${b3==null?'–':f(b3,0)+(b3>=50?' ⚠️':'')}</td><td class="l n" style="font-size:12px">${warnTxt(s)}</td></tr>`}).join('');
 }
 
 function buildInd(){
@@ -357,9 +392,10 @@ function openD(sym){
   if(s.illiq)ai.push('कारोबार कम भएकाले सूचक कम भरपर्दो।');
   if(s.lv&&s.lv.warnAvwapLo)ai.push('⚠️ मूल्य 52 हप्ते न्यूनदेखिको AVWAP ('+f(s.lv.avwapLo)+') तल छ।');
   if(s.lv&&s.lv.warnVal)ai.push('⚠️ मूल्य 60 दिने value area low ('+f(s.lv.val)+') तल झरेको छ।');
-  $('#dbox').innerHTML=`<button class="x" onclick="closeD()">बन्द ✕</button>
+  $('#dbox').innerHTML=`<button class="x" onclick="closeD()">बन्द ✕</button><button class="prbtn" onclick="doPrint('pr-detail')">प्रिन्ट 🖨</button>
   <h2 style="margin:0">${s.sym} <span class="sig s-${s.sig}" style="vertical-align:middle">${SIG[s.sig]}</span> <span style="font-size:15px">अङ्क ${sg(s.sc,0)}</span>${s.prevSc!=null?` <span class="note">(हिजो ${sg(s.prevSc,0)}, ${SIG[s.prevSig]||'–'})</span>`:''}</h2>
   <div class="sub">${s.date} · LTP <b>${f(s.c)}</b> <span class="${cls(s.chg)}">${sg(s.chg,2)}%</span></div>
+  ${sigBox(s.sym)}
   ${ai.length?`<div class="warn" style="margin-top:10px">${ai.join(' ')}</div>`:''}
   <div class="card"><div class="legend"><span><i style="background:var(--ink)"></i>मूल्य</span><span><i style="background:#2f9e9e"></i>20 EMA</span><span><i style="background:#b7791f"></i>50 MA</span><span><i style="background:#9b59b6"></i>200 MA</span><span><i style="background:var(--neg)"></i>Stop-loss</span><span><i style="background:#e64980"></i>AVWAP (52 हप्ते न्यूनबाट)</span><span><i style="background:#868e96"></i>POC / VAH / VAL (60 दिन)</span></div><canvas id="cv" height="300"></canvas></div>
   ${RV?.stocks?.[s.sym]?rvHtml(RV.stocks[s.sym].tech,'प्राविधिक समीक्षा — Murphy का दस नियम ('+RV.date+')',RV.stocks[s.sym].tech.stTxt,RV.stocks[s.sym].tech.stance)+rvHtml(RV.stocks[s.sym].fund,'आधारभूत समीक्षा — Graham (The Intelligent Investor)',RV.stocks[s.sym].fund.verdict,/^Defensive/.test(RV.stocks[s.sym].fund.verdict||'')?'positive':/आंशिक/.test(RV.stocks[s.sym].fund.verdict||'')?'mildpos':/सुरक्षाको सीमा छ/.test(RV.stocks[s.sym].fund.verdict||'')?'neutral':RV.stocks[s.sym].fund.verdict?'weak':'neutral'):''}
@@ -499,7 +535,7 @@ function buildMarket(){
     document.querySelectorAll('#tGain tr[data-s],#tLose tr[data-s],#tTurn tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
   }
   lineChart($('#cvBreadth'),[{data:M.breadthHist||[],color:css('--acc')}],{base:50,fmt:v=>v.toFixed(0)+'%'});
-  if(RV){$('#mktReview').innerHTML=rvHtml(RV.market,`बजार समीक्षा — Murphy का नियम (${RV.date})`,RV.market.stance,STNP[RV.market.stance]);
+  if(RV){$('#mktSig').innerHTML=mktSigHtml();$('#mktReview').innerHTML=rvHtml(RV.market,`बजार समीक्षा — Murphy का नियम (${RV.date})`,RV.market.stance,STNP[RV.market.stance]);
     const TN={quarterly:'प्रतिवेदन',dividend:'लाभांश/बोनस',right:'हकप्रद',agm:'साधारण सभा',bookclose:'बुक क्लोज',auction:'लिलाम',merger:'गाभ्ने',ipo:'IPO/ऋणपत्र',other:'अन्य'};
     $('#tNews').innerHTML=(RV.news||[]).slice(0,40).map(n=>`<tr style="cursor:default"><td class="l note" style="width:90px">${n.date}</td><td class="l">${n.symbol?symLink(n.symbol):'<span class="note">–</span>'}</td><td class="l note">${TN[n.type]||n.type}</td><td class="l" style="white-space:normal"><a href="${n.url}" target="_blank" rel="noopener">${esc(n.title)}</a></td></tr>`).join('')||'<tr><td class="note">–</td></tr>'}
 }
@@ -614,6 +650,35 @@ function buildFlows(){
   document.querySelectorAll('#pullTbl tr[data-s],#pushTbl tr[data-s],#accTbl tr[data-s],#distTbl tr[data-s],#divTbl tr[data-s]').forEach(r=>r.onclick=()=>openD(r.dataset.s));
 }
 
+// ---------- प्रिन्ट ----------
+function doPrint(mode,sec){document.body.classList.add(mode);if(sec)$('#'+sec).classList.add('pr-on');
+  const done=()=>{document.body.classList.remove(mode);if(sec)$('#'+sec).classList.remove('pr-on');window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done);setTimeout(()=>window.print(),50)}
+// ---------- दीर्घकालीन (Graham) र छोटो अवधि (Murphy) सङ्केत ----------
+const LTN={buy:'दीर्घकालीन खरिद',watch:'दीर्घकालीन निगरानी',no:'Graham योग्य छैन',sell:'बिक्री विचार (महँगो/कमजोर)',na:'आधारभूत डाटा छैन'};
+const STN={fav:'अनुकूल',neu:'तटस्थ',unf:'प्रतिकूल'};
+const sigOf=sym=>RV?.stocks?.[sym]?.sig||null;
+const ltB=g=>g?`<span class="sig lt-${g.lt}">${LTN[g.lt]}</span>`:'–';
+const stB=g=>g?`<span class="sig st-${g.st}">${STN[g.st]}</span>`:'–';
+function sigBox(sym){const g=sigOf(sym);if(!g)return '';
+  return `<div class="sigbox"><b>छोटकरीमा</b>
+  <div class="row"><div><span class="note">दीर्घकालीन — Graham (The Intelligent Investor)</span><br>${ltB(g)}<div class="note" style="margin-top:4px">${esc(g.ltWhy)}</div></div>
+  <div><span class="note">छोटो अवधि — Murphy (प्राविधिक)</span><br>${stB(g)}<div class="note" style="margin-top:4px">${esc(g.stWhy)}</div></div>
+  <div><span class="note">दुवै मिलाएर</span><br><b>${esc(g.comboTxt)}</b></div></div>
+  <p>${esc(g.summary)}</p></div>`}
+function mktSigHtml(){const A=Object.entries(RV.stocks||{});if(!A.length)return '';
+  const grp={};for(const [sym,x] of A)(grp[x.sig.combo]??=[]).push(sym);
+  const by=k=>(grp[k]||[]).sort().map(x=>symLink(x)).join(', ')||'<span class="note">छैन</span>';
+  const cnt=k=>A.filter(([_,x])=>x.sig.lt===k).length,cs=k=>A.filter(([_,x])=>x.sig.st===k).length;
+  return `<div class="card"><b>दीर्घकालीन र छोटो अवधिका सङ्केत (${RV.date})</b>
+   <div class="note" style="margin:4px 0 8px">Graham: खरिद ${cnt('buy')} · निगरानी ${cnt('watch')} · योग्य छैन ${cnt('no')} · बिक्री विचार ${cnt('sell')} · डाटा छैन ${cnt('na')} &nbsp;|&nbsp; Murphy: अनुकूल ${cs('fav')} · तटस्थ ${cs('neu')} · प्रतिकूल ${cs('unf')}</div>
+   <table><tbody>
+   <tr style="cursor:default"><td class="l" style="width:230px"><span class="sig lt-buy">मूल्य र समय दुवै अनुकूल</span></td><td class="l" style="white-space:normal">${by('both')}</td></tr>
+   <tr style="cursor:default"><td class="l"><span class="sig lt-watch">मूल्य राम्रो, समय पर्खने</span></td><td class="l" style="white-space:normal">${by('value_wait')}</td></tr>
+   <tr style="cursor:default"><td class="l"><span class="sig st-neu">प्राविधिक अनुकूल, मूल्य धेरै महँगो</span></td><td class="l" style="white-space:normal">${by('trade_dear')}</td></tr>
+   <tr style="cursor:default"><td class="l"><span class="sig lt-sell">टाढा रहने / बिक्री विचार</span></td><td class="l" style="white-space:normal">${by('avoid_sell')}</td></tr>
+   </tbody></table>
+   <p class="note">Graham सङ्केत आधारभूत तथ्याङ्क भएका कम्पनीमा मात्र (हाल करिब ${A.length-cnt('na')} वटा)। "छोटो अवधिको कारोबार मात्र" (आधारभूत डाटा नभएका वा Graham योग्य नभएका तर प्राविधिक अनुकूल) ${(grp.trade||[]).length} वटा — शेयरहरू ट्याबमा फिल्टर गरेर हेर्नुहोस्।</p></div>`}
 // ---------- लिखित समीक्षा ----------
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function rvHtml(o,title,stance,cls_){if(!o)return '';return `<div class="card rv"><b>${title}</b>${stance?`<span class="stance st-${cls_||'neutral'}">${stance}</span>`:''}${o.staleNote?`<div class="warn" style="margin-top:8px">${esc(o.staleNote)}</div>`:''}
@@ -720,7 +785,7 @@ function pfRender(){
     :'<div class="warn">अहिलेसम्म कुनै शेयर राखिएको छैन। तलको form बाट थप्नुहोस्, वा CSV/Backup import गर्नुहोस्।</div>';
   const sigs=H.map(h=>pfSignal(h,tv));
   const order={sell:0,caut:1,add:2,hold:3,na:4};const idx=H.map((h,i)=>i).sort((a,b)=>order[sigs[a].lvl]-order[sigs[b].lvl]||(H[b].val||0)-(H[a].val||0));
-  $('#pfTbl').innerHTML=H.length?`<thead><tr><th class="l">सिम्बोल</th><th class="l">खाता</th><th>कित्ता</th><th>औसत लागत</th><th>LTP</th><th>आज %</th><th>बजार मूल्य</th><th>नाफा/नोक्सान</th><th>%</th><th>हिस्सा %</th><th>दिन</th><th>Trailing stop</th><th class="l">सङ्केत</th><th class="l">कारण</th><th></th></tr></thead><tbody>${idx.map(i=>{const h=H[i],g=sigs[i];return `<tr style="cursor:default"><td>${symLink(h.sym)}<div class="note">${secShort(secOf(h.sym))}</div></td><td class="l note">${h.acct||'–'}</td><td>${num(h.qty)}</td><td>${f(h.avg,2)}</td><td>${f(h.c)}</td><td class="${cls(h.s?.chg)}">${sg(h.s?.chg,2)}</td><td>${num(h.val)}</td><td class="${cls(h.pl)}">${num(h.pl)}</td><td class="${cls(h.plPct)}">${sg(h.plPct,1)}</td><td>${f(g.w,1)}</td><td>${daysBetween(h.first,todayNp())}</td><td>${f(g.trail)}</td><td class="l"><span class="sig ${LVLCLS[g.lvl]}">${g.txt}</span></td><td class="l note" style="white-space:normal;min-width:220px">${g.R.join('; ')}</td><td><button class="lockbtn" style="float:none" data-sell="${h.sym}|${h.acct}">बेचेँ</button></td></tr>`}).join('')}</tbody>`:'';
+  $('#pfTbl').innerHTML=H.length?`<thead><tr><th class="l">सिम्बोल</th><th class="l">खाता</th><th>कित्ता</th><th>औसत लागत</th><th>LTP</th><th>आज %</th><th>बजार मूल्य</th><th>नाफा/नोक्सान</th><th>%</th><th>हिस्सा %</th><th>दिन</th><th>Trailing stop</th><th class="l">दीर्घकालीन (Graham)</th><th class="l">छोटो अवधि (Murphy)</th><th class="l">होल्डिङ सङ्केत</th><th class="l">कारण</th><th></th></tr></thead><tbody>${idx.map(i=>{const h=H[i],g=sigs[i];return `<tr style="cursor:default"><td>${symLink(h.sym)}<div class="note">${secShort(secOf(h.sym))}</div></td><td class="l note">${h.acct||'–'}</td><td>${num(h.qty)}</td><td>${f(h.avg,2)}</td><td>${f(h.c)}</td><td class="${cls(h.s?.chg)}">${sg(h.s?.chg,2)}</td><td>${num(h.val)}</td><td class="${cls(h.pl)}">${num(h.pl)}</td><td class="${cls(h.plPct)}">${sg(h.plPct,1)}</td><td>${f(g.w,1)}</td><td>${daysBetween(h.first,todayNp())}</td><td>${f(g.trail)}</td><td class="l">${ltB(sigOf(h.sym))}</td><td class="l">${stB(sigOf(h.sym))}</td><td class="l"><span class="sig ${LVLCLS[g.lvl]}">${g.txt}</span></td><td class="l note" style="white-space:normal;min-width:220px">${g.R.join('; ')}</td><td><button class="lockbtn" style="float:none" data-sell="${h.sym}|${h.acct}">बेचेँ</button></td></tr>`}).join('')}</tbody>`:'';
   $('#pfTbl').querySelectorAll('[data-sell]').forEach(b=>b.onclick=()=>pfSellForm(b.dataset.sell));
   // allocation
   const al={};H.forEach(h=>{if(h.val!=null){const k=secShort(secOf(h.sym));al[k]=(al[k]||0)+h.val}});

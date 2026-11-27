@@ -1,7 +1,11 @@
 name: daily-floorsheet
 on:
   schedule:
-    - cron: "30 10 * * 0-5"   # 16:15 Nepal time, Sun-Fri (after market close)
+    # 16:15, 17:00 and 18:45 Nepal time, Sun-Fri. GitHub sometimes drops scheduled runs under load,
+    # so the later runs are a safety net; every run just rewrites the same day's files.
+    - cron: "30 10 * * 0-5"
+    - cron: "15 11 * * 0-5"
+    - cron: "0 13 * * 0-5"
   workflow_dispatch: {}
 permissions:
   contents: write

@@ -4,13 +4,14 @@
 // margin of safety ch.20, Mr. Market ch.8), adapted where NEPSE data differ (banks: CAR/NPL instead of current ratio).
 // Rule-based: every sentence comes from the day's numbers. Usage: node scripts/build_reviews.js <repo data dir> <docs/data dir>
 const fs = require('fs'), path = require('path');
-const [DATA, OUTD] = process.argv.slice(2);
-const L = JSON.parse(fs.readFileSync(path.join(OUTD, 'latest.json'), 'utf8'));
-const M = JSON.parse(fs.readFileSync(path.join(OUTD, 'market.json'), 'utf8'));
-const BR = fs.existsSync(path.join(OUTD, 'brokers.json')) ? JSON.parse(fs.readFileSync(path.join(OUTD, 'brokers.json'), 'utf8')) : null;
+const MAIN = require.main === module;
+const [DATA, OUTD] = MAIN ? process.argv.slice(2) : ['.', '.'];
+let L = MAIN ? JSON.parse(fs.readFileSync(path.join(OUTD, 'latest.json'), 'utf8')) : { stocks: [], counts: {} };
+let M = MAIN ? JSON.parse(fs.readFileSync(path.join(OUTD, 'market.json'), 'utf8')) : { flows: [], sectors: [], div: { stocks: {}, sectors: {} } };
+let BR = MAIN && fs.existsSync(path.join(OUTD, 'brokers.json')) ? JSON.parse(fs.readFileSync(path.join(OUTD, 'brokers.json'), 'utf8')) : null;
 const csv = t => { const R = t.trim().split(/\r?\n/); const H = R[0].split(','); return R.slice(1).map(l => { const out = []; let cur = '', q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === ',' && !q) { out.push(cur); cur = '' } else cur += ch } out.push(cur); const o = {}; H.forEach((k, j) => o[k] = out[j] ?? ''); return o }) };
 const newsPath = path.join(DATA, 'news', 'announcements.csv');
-const NEWS = fs.existsSync(newsPath) ? csv(fs.readFileSync(newsPath, 'utf8')) : [];
+const NEWS = MAIN && fs.existsSync(newsPath) ? csv(fs.readFileSync(newsPath, 'utf8')) : [];
 // High-grade yield benchmark for Graham's earnings-yield comparison: average maximum individual fixed-deposit rate of
 // commercial banks, Mangsir 2083 (ShareSansar, 2026-11-16). Update when rates change.
 const FD_RATE = 3.906, FD_NOTE = 'वाणिज्य बैंकको व्यक्तिगत मुद्दती निक्षेपको औसत अधिकतम दर (मंसिर 2083)';
@@ -30,13 +31,13 @@ const rsiArr = (C, n = 14) => { const o = new Array(C.length).fill(null); if (C.
 const SECNP = { 'Commercial Banks': 'वाणिज्य बैंक', 'Development Banks': 'विकास बैंक', 'Finance': 'वित्त', 'Hotels And Tourism': 'होटल तथा पर्यटन', 'Hydro Power': 'जलविद्युत', 'Investment': 'लगानी', 'Life Insurance': 'जीवन बीमा', 'Manufacturing And Processing': 'उत्पादन तथा प्रशोधन', 'Microfinance': 'लघुवित्त', 'Non Life Insurance': 'निर्जीवन बीमा', 'Others': 'अन्य', 'Tradings': 'व्यापार' };
 const secNp = s => SECNP[s] || s || 'अवर्गीकृत';
 const SIG = { buy: 'किन्न योग्य', watch: 'निगरानी', hold: 'होल्ड', sell: 'बिक्री/सावधान' };
-const flowsBy = Object.fromEntries((M.flows || []).map(f => [f.sym, f]));
+let flowsBy = Object.fromEntries((M.flows || []).map(f => [f.sym, f]));
 const secRow = Object.fromEntries((M.sectors || []).map(s => [s.sector, s]));
 const sectorOf = M.sectorOf || {};
 const FUND = M.fundamentals || {};
-const DIV = M.div || { stocks: {}, sectors: {} };
+let DIV = M.div || { stocks: {}, sectors: {} };
 const CAPS = M.caps || {}; // NEPSE marketCapitalization is in Rs million
-const DISC_T = 'John J. Murphy को "Technical Analysis of the Financial Markets" का Ten Laws को ढाँचामा नियमअनुसार स्वचालित रूपमा लेखिएको समीक्षा हो, लगानी सल्लाह होइन। NEPSE को backtest मा स्क्यानको खरिद सङ्केतले भरपर्दो रूपमा बजार जितेको देखिएको छैन।';
+const DISC_T = 'John J. Murphy को "Technical Analysis of the Financial Markets" का Ten Laws को ढाँचामा नियमअनुसार स्वचालित रूपमा लेखिएको समीक्षा हो, लगानी सल्लाह होइन। यही समीक्षाको 2018–2026 backtest मा "अनुकूल" अवस्थाका शेयरले 20 दिनमा बजारलाई औसत 0.1–0.3% मात्र जिते (लागत करिब 1% भन्दा कम) र "कमजोर" ले लगातार हारे — त्यसैले यसलाई समय छान्न र कमजोर शेयरबाट टाढा रहन प्रयोग गर्नुहोस्।';
 const DISC_F = 'Benjamin Graham को "The Intelligent Investor" का मापदण्डमा आधारित स्वचालित समीक्षा हो, लगानी सल्लाह होइन। NEPSE का लागि केही मापदण्ड अनुकूलन गरिएका छन् (जस्तै बैंकमा current ratio को सट्टा CAR र NPL)। उपलब्ध नभएका तथ्याङ्कको जाँच "डाटा छैन" भनी छाडिएको छ।';
 
 // ---------- price-structure tools (Murphy) ----------
@@ -193,7 +194,7 @@ function fundRow(sym, c) {
 function stockFund(s) {
   const sec = sectorOf[s.sym], r = fundRow(s.sym, s.c), c = s.c, m = s.m;
   const news = NEWS.filter(n => n.symbol === s.sym).slice(0, 8);
-  const P = []; let verdictOut = null;
+  const P = []; let verdictOut = null, lt = 'na', ltWhy = 'आधारभूत तथ्याङ्क अझै डाटामा छैन', gnOut = null;
   if (!r) {
     P.push({ h: 'तथ्याङ्क', t: `${s.sym} को EPS, book value जस्ता आधारभूत तथ्याङ्क अझै डाटामा छैनन्, त्यसैले Graham का मापदण्ड जाँच्न सकिएन। साप्ताहिक अद्यावधिकमा थपिँदै जानेछ।` });
   } else {
@@ -210,7 +211,8 @@ function stockFund(s) {
     else if (isIns) C_('2. बलियो वित्तीय अवस्था (बीमा: solvency अनुपात चाहिन्छ)', null, 'डाटा छैन');
     else C_('2. बलियो वित्तीय अवस्था (current ratio ≥ 2, ऋण ≤ खुद चालु सम्पत्ति)', r.cr != null ? r.cr >= 2 && (r.de == null || r.de <= 1) : null, r.cr != null ? `current ratio ${n2(r.cr)}${r.de != null ? ', D/E ' + n2(r.de) : ''}` : 'डाटा छैन');
     C_('3. आम्दानी स्थिरता (10 वर्ष लगातार नाफा)', r.hist.length >= 10 ? r.hist.slice(-10).every(x => x.v > 0) : (r.hist.some(x => x.v <= 0) || r.loss) ? false : null, r.hist.length ? `${r.hist.length} वर्षको EPS: ${r.hist.map(x => `${x.y} ${n1(x.v)}`).join(', ')}` : `पछिल्लो: ${r.loss ? 'घाटा' : 'नाफा'} (बहुवर्षीय EPS डाटा छैन)`);
-    C_('4. लाभांश इतिहास (20 वर्ष निरन्तर)', r.dh.length >= 20 ? true : null, r.dh.length ? `${r.dh.length} वर्षको रेकर्ड: ${r.dh.slice(-5).map(x => `${x.y} ${x.v}`).join(', ')}` : 'डाटा छैन' + (news.some(n => n.type === 'dividend') ? ' (हालै लाभांश/बोनस घोषणा भएको छ)' : ''));
+    const dh10 = r.dh.slice(-10), divOk = r.dh.length >= 10 ? dh10.every(x => x.v && x.v !== '0') : (r.dh.some(x => x.v === '0') ? false : null);
+    C_('4. लाभांश इतिहास (NEPSE अनुकूलन: 20 को सट्टा 10 वर्ष निरन्तर, नगद वा बोनस)', divOk, r.dh.length ? `${r.dh.length} वर्षको रेकर्ड: ${r.dh.slice(-5).map(x => `${x.y} ${x.v}`).join(', ')}` : 'डाटा छैन' + (news.some(n => n.type === 'dividend') ? ' (हालै लाभांश/बोनस घोषणा भएको छ)' : ''));
     C_('5. आम्दानी वृद्धि (10 वर्षमा कम्तीमा 33%, 3 वर्षे औसतमा)', r.hist.length >= 10 ? (sum(r.hist.slice(-3).map(x => x.v)) / 3) >= 1.33 * (sum(r.hist.slice(-10, -7).map(x => x.v)) / 3) : null, r.hist.length >= 10 ? '3 वर्षे औसत तुलना' : 'डाटा छैन');
     C_('6. मध्यम P/E (≤ 15, सम्भव भए 3 वर्षे औसत EPS मा)', peAvg != null ? peAvg <= 15 : r.loss ? false : null, peAvg != null ? `P/E ${n1(peAvg)}${eps3 ? ' (3 वर्षे औसत)' : ' (उपलब्ध EPS मा)'}` : r.loss ? 'घाटा' : 'डाटा छैन');
     C_('7. मध्यम P/B (≤ 1.5, वा P/E × P/B ≤ 22.5)', r.pb != null ? (r.pb <= 1.5 || (peAvg != null && peAvg * r.pb <= 22.5)) : null, r.pb != null ? `P/B ${n2(r.pb)}${peAvg ? `, P/E × P/B ${n1(peAvg * r.pb)}` : ''}` : 'डाटा छैन');
@@ -236,13 +238,22 @@ function stockFund(s) {
     const pos = m.hi52 > m.lo52 ? (c - m.lo52) / (m.hi52 - m.lo52) : null;
     const cheap = gn && c <= gn, dear = (gn && c > gn * 1.5) || (peAvg != null && peAvg > 25);
     P.push({ h: 'Mr. Market (अध्याय 8)', t: `मूल्य 120 दिनमा ${p(m.r120)} र 52 हप्ते दायराको ${pos != null ? n0(pos * 100) + '%' : '–'} मा छ। ` + (pos != null && pos < 0.3 && !r.loss && pass >= Math.ceil(known.length / 2) ? 'बजार निराश देखिन्छ तर आधारभूत तथ्याङ्क उल्लेखनीय रूपमा कमजोर छैनन् — Graham अनुसार Mr. Market को निराशा अवसर हुन सक्छ, यदि सुरक्षाको सीमा छ भने।' : pos != null && pos > 0.8 && dear ? 'बजार उत्साहित देखिन्छ र मूल्याङ्कन महँगो — Graham अनुसार Mr. Market को उत्साहमा किन्नुभन्दा पर्खनु राम्रो।' : 'मूल्यलाई बजारको मनोभावभन्दा व्यवसायको आम्दानी र सम्पत्तिका आधारमा हेर्नुहोस् — Mr. Market ले दिने मूल्य स्वीकार गर्न बाध्य छैन।') });
+    const known7 = chk.filter(x => x.ok != null).length, fail7 = chk.filter(x => x.ok === false).length;
+    lt = r.loss || (r.npl != null && r.npl >= 10) || (gn && c > 1.5 * gn) ? 'sell'
+      : known7 === 7 && fail7 === 0 ? 'buy'
+      : chk[5].ok === true && chk[6].ok === true && gn && c <= gn && fail7 === 0 ? 'watch' : 'no';
+    ltWhy = lt === 'sell' ? (r.loss ? 'कम्पनी घाटामा' : r.npl != null && r.npl >= 10 ? `NPL ${n1(r.npl)}% धेरै उच्च` : `मूल्य Graham number (${rs(gn)}) को ${n1(c / gn)} गुणा — धेरै महँगो`)
+      : lt === 'buy' ? 'Graham का सातै मापदण्ड पूरा'
+      : lt === 'watch' ? `P/E ${n1(peAvg)} र P/B ${n2(r.pb)} मापदण्डभित्र, मूल्य Graham number (${rs(gn)}) भन्दा तल; ${7 - known7} मापदण्डको डाटा आउन बाँकी`
+      : `${known7} मध्ये ${known7 - fail7} मापदण्ड पास; ${chk.filter(x => x.ok === false).map(x => x.k.replace(/^\d\. /, '').replace(/ \(.*$/, '')).join(', ')} पूरा भएन`;
+    gnOut = gn;
     verdictOut = r.loss ? 'Graham को मापदण्डमा अयोग्य (घाटा)' : known.length >= 5 && pass === known.length ? 'Defensive लगानीकर्ताका लागि योग्य' : pass >= Math.max(3, known.length - 1) && cheap ? 'आंशिक रूपमा योग्य; सुरक्षाको सीमा छ' : cheap ? 'सुरक्षाको सीमा छ, तर अरू मापदण्ड अपूर्ण वा कमजोर' : 'Graham को मापदण्डमा अहिले योग्य होइन (मूल्य वा गुणस्तर)';
     P.push({ h: 'निष्कर्ष', t: `${verdictOut}। तथ्याङ्कको आधार: ${r.F.period}, स्रोत ${r.F.source.replace('claude/', '')}। P/E, P/B र Graham number हरेक दिनको मूल्यमा फेरि गणना हुन्छन्; EPS र book value नयाँ प्रतिवेदन आएपछि साप्ताहिक रूपमा अद्यावधिक हुन्छन्।` });
   }
   const typeNp = { quarterly: 'त्रैमासिक/वित्तीय प्रतिवेदन', dividend: 'लाभांश/बोनस', right: 'हकप्रद', agm: 'साधारण सभा', bookclose: 'बुक क्लोज', auction: 'लिलाम', merger: 'गाभ्ने/प्राप्ति', ipo: 'IPO/FPO/ऋणपत्र', other: 'अन्य' };
   const fresh = r && news.find(n => n.type === 'quarterly' && n.date > '2026-11-25');
   if (news.length) P.push({ h: 'हालका सूचना', list: news.map(n => ({ d: n.date, t: typeNp[n.type] || n.type, title: n.title, url: n.url })) });
-  return { has: !!r, verdict: verdictOut, paras: P, disc: DISC_F, stale: !!fresh, staleNote: fresh ? `नयाँ वित्तीय प्रतिवेदन सम्बन्धी सूचना (${fresh.date}) आएको छ; EPS र book value अर्को साप्ताहिक अद्यावधिकसम्म पुराना हुन सक्छन्।` : null };
+  return { has: !!r, verdict: verdictOut, lt, ltWhy, gn: gnOut, paras: P, disc: DISC_F, stale: !!fresh, staleNote: fresh ? `नयाँ वित्तीय प्रतिवेदन सम्बन्धी सूचना (${fresh.date}) आएको छ; EPS र book value अर्को साप्ताहिक अद्यावधिकसम्म पुराना हुन सक्छन्।` : null };
 }
 
 // ---------- index-level technical review (market / sector): Murphy's laws on close-only series ----------
@@ -307,10 +318,37 @@ function sectorReview(sr) {
 }
 
 // ---------- build ----------
+module.exports = { stockTech, setFlow: (sym, f) => { flowsBy[sym] = f } };
+if (MAIN) {
 const out = { date: L.date, generated: new Date().toISOString(), market: marketReview(), sectors: {}, stocks: {}, news: NEWS.slice(0, 60), fdRate: FD_RATE };
 for (const sr of M.sectors || []) { try { out.sectors[sr.sector] = sectorReview(sr) } catch (e) { console.error('sector review failed', sr.sector, e.message) } }
-for (const s of L.stocks) { try { out.stocks[s.sym] = { tech: stockTech(s), fund: stockFund(s) } } catch (e) { console.error('review failed', s.sym, e.message) } }
+const LT = { buy: 'दीर्घकालीन खरिद', watch: 'दीर्घकालीन निगरानी', no: 'Graham योग्य छैन', sell: 'महँगो/कमजोर — बिक्री विचार', na: 'डाटा छैन' };
+const ST = { positive: 'अनुकूल', mildpos: 'अनुकूल', neutral: 'तटस्थ', weak: 'प्रतिकूल', negative: 'प्रतिकूल' };
+const STK = { positive: 'fav', mildpos: 'fav', neutral: 'neu', weak: 'unf', negative: 'unf' };
+function signals(s, tech, fund) {
+  const st = STK[tech.stance], lt = fund.lt, val = lt === 'buy' || lt === 'watch';
+  const combo = val && st === 'fav' ? ['both', 'मूल्य र समय दुवै अनुकूल']
+    : val ? ['value_wait', 'मूल्य राम्रो; समय पर्खने वा थोरै-थोरै किन्ने']
+    : st === 'fav' && lt !== 'sell' ? ['trade', 'छोटो अवधिको कारोबार मात्र — stop-loss अनिवार्य']
+    : st === 'fav' && lt === 'sell' ? ['trade_dear', 'प्राविधिक अनुकूल तर मूल्य धेरै महँगो — जोखिमपूर्ण']
+    : lt === 'sell' ? ['avoid_sell', 'टाढा रहने; राखेको भए बेच्ने विचार']
+    : ['avoid', 'अहिले टाढा रहने वा पर्खने'];
+  const e = tech.ev, m = s.m;
+  const stWhy = `${e.bull} सकारात्मक र ${e.bear} नकारात्मक प्राविधिक प्रमाण${e.warn ? `, ${e.warn} चेतावनी` : ''}`;
+  const trend = s.c > m.ema20 && (s.reasons.find(r => r.k === 'ema20_slope')?.pts > 0) ? 'मूल्य 20 दिने EMA माथि र उकालो' : s.c < m.ema20 ? 'मूल्य 20 दिने EMA तल' : 'मूल्य 20 दिने EMA नजिक';
+  const summary = [
+    `${s.sym} को आजको मूल्य ${rs(s.c)} (${p(s.chg, 2)}) छ; ${trend}।`,
+    `दीर्घकालीन (Graham): ${LT[lt]} — ${fund.ltWhy}।`,
+    `छोटो अवधि (Murphy): ${ST[tech.stance]} — ${stWhy}।`,
+    `संयुक्त: ${combo[1]}।`,
+    val || st === 'fav' ? `राखेको भए ${rs(s.stop)} तल बन्द भए जोखिम घटाउने; नयाँ किन्ने भए ${rs(Math.max(s.stop, m.ema20 * 0.99))}–${rs(m.ema20)} नजिक सुधार पर्खनु राम्रो।` : `राखेको भए ${rs(s.stop)} तल बन्द भए घटाउने वा बेच्ने विचार गर्नुहोस्।`
+  ].join(' ');
+  return { lt, ltTxt: LT[lt], ltWhy: fund.ltWhy, st, stTxt: ST[tech.stance], stWhy, combo: combo[0], comboTxt: combo[1], summary };
+}
+for (const s of L.stocks) { try { const tech = stockTech(s), fund = stockFund(s); out.stocks[s.sym] = { tech, fund, sig: signals(s, tech, fund) } } catch (e) { console.error('review failed', s.sym, e.message) } }
+const sc = {}; Object.values(out.stocks).forEach(x => { const k = x.sig.lt + '/' + x.sig.st; sc[k] = (sc[k] || 0) + 1 }); console.log('signals (Graham/Murphy):', JSON.stringify(sc));
 fs.writeFileSync(path.join(OUTD, 'reviews.json'), JSON.stringify(out));
 const st = {}; Object.values(out.stocks).forEach(x => st[x.tech.stance] = (st[x.tech.stance] || 0) + 1);
 const gv = {}; Object.values(out.stocks).forEach(x => { if (x.fund.verdict) gv[x.fund.verdict] = (gv[x.fund.verdict] || 0) + 1 });
 console.log(`reviews.json: market ${out.market.stance}, ${Object.keys(out.sectors).length} sectors, ${Object.keys(out.stocks).length} stocks ${JSON.stringify(st)}, Graham ${JSON.stringify(gv)}, news ${NEWS.length}`);
+}
